@@ -25,14 +25,9 @@ class IonPump:
         wait_time: float, the wait time for a read after a send command
         sendwidget: Widget; ignore unless making a gui
         recvwidget: Widget; ignore unless making a gui
-        history_file_string: A string path to a history file which the ion pump should log into. If not specified, a default name is chosen
-        and an empty file created
-        log_history: bool, whether the ion gauge should log its readings.
-        overwrite_history: bool, whether the ion gauge should overwrite the specified history file
     """
 
-    def __init__(self, pump_label, COM_PORT, address=None, echo=True, wait_time=0.1, sendwidget=None, recvwidget=None,
-                 history_file_string=None, log_history=True, overwrite_history=False):
+    def __init__(self, pump_label, COM_PORT, address=None, echo=True, wait_time=0.1, sendwidget=None, recvwidget=None):
         # Default port settings for ion pumps
         PORT_SETTINGS = {'baudrate': 9600, 'bytesize': serial.EIGHTBITS,
                          'parity': serial.PARITY_NONE, 'stopbits': serial.STOPBITS_ONE, 'timeout': 1}
@@ -42,8 +37,7 @@ class IonPump:
         self.wait_time = wait_time
         self.sendwidget = sendwidget
         self.recvwidget = recvwidget
-        self.log_history = log_history
-        self.overwrite_history = overwrite_history
+
         if(address is None):
             if(pump_label == "mpc"):
                 self.address = MPC_DEFAULT_ADDRESS
@@ -51,22 +45,6 @@ class IonPump:
                 self.address = SPC_DEFAULT_ADDRESS
         else:
             self.address = address
-        if(history_file_string == None):
-            label_index = 0
-            label_ok = False
-            while(not label_ok):
-                attempted_filename = DEFAULT_LOG_FILE_STRING + \
-                    str(label_index) + ".csv"
-                label_ok = not os.path.exists(attempted_filename)
-                label_index += 1
-            history_file_string = attempted_filename
-        if(self.log_history):
-            if(self.overwrite_history):
-                self.history_csv_file = open(history_file_string, 'w')
-            else:
-                self.history_csv_file = open(history_file_string, 'a')
-        else:
-            self.history_csv_file = None
 
     """
     Sends an arbitrary command to the ion pump
