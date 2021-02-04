@@ -57,30 +57,15 @@ class IonPump:
                 self.address = SPC_DEFAULT_ADDRESS
         else:
             self.address = address
-        if(history_file_string == None):
-            label_index = 0 
-            label_ok = False
-            while(not label_ok):
-                attempted_filename = DEFAULT_LOG_FILE_STRING + str(label_index) + ".csv"
-                label_ok = not os.path.exists(attempted_filename) 
-                label_index += 1
-            history_file_string = attempted_filename
-        if(self.log_history):
-            if(self.overwrite_history):
-                self.history_csv_file = open(history_file_string, 'w')
-            else:
-                self.history_csv_file = open(history_file_string, 'a')
-        else:
-            self.history_csv_file = None 
         
 
     def __enter__(self):
         return self 
     """
-    Sends an arbitrary command to the turbo pump
+    Sends an arbitrary command to the ion pump
 
     Args: 
-        command: str, the command to be sent to the turbo pump. Is encoded as ASCII bytes
+        command: str, the command to be sent to the ion pump. Is encoded as ASCII bytes
         add_checksum_and_end: Convenience. If True, the command string has a checksum and carriage return character 
         appended, following the initial tilde convention
     
