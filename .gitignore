@@ -2,6 +2,10 @@ wavemeter_debugging.log
 
 fermi1bot_config.json
 
+analysis_config.json
+
+*dailynb.ipynb
+
 
 API_CONFIG_fermi1.json
 
@@ -38,3 +42,6 @@ breadboard-python-client/
 
 images/
 202011/
+*.spe
+*.png
+*.csv
