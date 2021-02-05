@@ -109,8 +109,8 @@ class IonPump:
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
         current_measure_command = self._make_command(CURRENT_MEASURE_CODE, data_field = data_field)
-        current_bytes_list = self.send_and_get_response(current_measure_command)
-        current_value = self.parse_current_bytes(current_bytes_list)
+        current_bytes = self.send_and_get_response(current_measure_command)
+        current_value = self.parse_current_bytes(current_bytes)
         return current_value 
 
     """Measures ion pump pressure."""
@@ -121,8 +121,8 @@ class IonPump:
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
         pressure_measure_command = self._make_command(PRESSURE_MEASURE_CODE, data_field = data_field) 
-        pressure_bytes_list = self.send_and_get_response(pressure_measure_command)
-        pressure_value = self.parse_pressure_bytes(pressure_bytes_list) 
+        pressure_bytes = self.send_and_get_response(pressure_measure_command)
+        pressure_value = self.parse_pressure_bytes(pressure_bytes) 
         return pressure_value 
 
     """Measures ion pump voltage"""
@@ -133,8 +133,8 @@ class IonPump:
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
         voltage_measure_command = self._make_command(VOLTAGE_MEASURE_CODE, data_field = data_field)
-        voltage_bytes_list = self.send_and_get_response(voltage_measure_command)
-        voltage_value = self.parse_voltage_bytes(voltage_bytes_list) 
+        voltage_bytes = self.send_and_get_response(voltage_measure_command)
+        voltage_value = self.parse_voltage_bytes(voltage_bytes) 
         return voltage_value 
 
     """Convenience method to turn off the pump.
@@ -152,8 +152,8 @@ class IonPump:
         try:
             if(self.pump_label == "spc"):
                 turn_off_command = self._make_command(TURN_OFF_CODE)
-                response_bytes_list = self.send_and_get_response(turn_off_command)
-                response_string = response_bytes_list[0].decode("ASCII")
+                response_bytes = self.send_and_get_response(turn_off_command)
+                response_string = response_bytes.decode("ASCII")
                 status_code = response_string[3:5]
                 if(status_code == "OK"):
                     return True
@@ -164,10 +164,10 @@ class IonPump:
                 data_field_2 = '2'
                 turn_off_command_1 = self._make_command(TURN_OFF_CODE, data_field = data_field_1)
                 turn_off_command_2 = self._make_command(TURN_OFF_CODE, data_field = data_field_2)
-                response_1_bytes_list = self.send_and_get_response(turn_off_command_1) 
-                response_1_string = response_1_bytes_list[0].decode("ASCII")
-                response_2_bytes_list = self.send_and_get_response(turn_off_command_2) 
-                response_2_string = response_2_bytes_list[0].decode("ASCII")
+                response_1_bytes = self.send_and_get_response(turn_off_command_1) 
+                response_1_string = response_1_bytes.decode("ASCII")
+                response_2_bytes = self.send_and_get_response(turn_off_command_2) 
+                response_2_string = response_2_bytes.decode("ASCII")
                 response_1_status_code = response_1_string[3:5]
                 response_2_status_code = response_2_string[3:5]
                 if(response_1_status_code == "OK" and response_2_status_code == "OK"):
@@ -202,8 +202,8 @@ class IonPump:
         return command_final 
 
     @staticmethod
-    def parse_current_bytes(current_bytes_list):
-        current_string = current_bytes_list[0].decode("ASCII")
+    def parse_current_bytes(current_bytes):
+        current_string = current_bytes.decode("ASCII")
         status_code = current_string[3:5]
         if(status_code == "OK"):
             #Search function imported from parse module
@@ -215,8 +215,8 @@ class IonPump:
             return -1
         
     @staticmethod
-    def parse_pressure_bytes(pressure_bytes_list):
-        pressure_string = pressure_bytes_list[0].decode("ASCII")
+    def parse_pressure_bytes(pressure_bytes):
+        pressure_string = pressure_bytes.decode("ASCII")
         status_code = pressure_string[3:5]
         if(status_code == "OK"):
             pressure_value_string = search('OK 00 {} ', pressure_string)[0]
@@ -226,8 +226,8 @@ class IonPump:
             return -1
 
     @staticmethod
-    def parse_voltage_bytes(voltage_bytes_list):
-        voltage_string = voltage_bytes_list[0].decode("ASCII")
+    def parse_voltage_bytes(voltage_bytes):
+        voltage_string = voltage_bytes.decode("ASCII")
         status_code = voltage_string[3:5]
         if(status_code == "OK"):
             voltage_value_string = search('OK 00 {} ', voltage_string)[0]
@@ -259,7 +259,8 @@ class IonPump:
 
     def send_and_get_response(self, command, add_checksum_and_end = False):
         self.send(command, add_checksum_and_end= add_checksum_and_end)
-        return self.serial_port.readlines()
+        #Ion pump responses end with a carriage return
+        return self.serial_port.read_until("\r".encode("ASCII"))
 
 
     # def sendrecv(self, cmd):
