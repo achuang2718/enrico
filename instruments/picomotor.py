@@ -112,8 +112,8 @@ class MSerial:
                                                                                            step_size),
                                                                                        alias=alias))
         self.update_motor_history(driver_idx, motor_idx, step_size)
-        
-        #step in +/- MAX_STEP_SIZE increments until |remaining step_size| <= 50.
+
+        # step in +/- MAX_STEP_SIZE increments until |remaining step_size| <= 50.
         while step_size * sign > MAX_STEP_SIZE:
             active_motor_cmd = 'chl a{driver}={motor}'.format(
                 driver=str(driver_idx), motor=str(motor_idx))
@@ -196,5 +196,81 @@ class MSerial:
         pass
 
 
-picomotor = MSerial('COM4')
-print('\n INFO: picomotor has methods picomotor.move(alias=ALIAS_HERE, step_size=STEP_SIZE_HERE), picomotor.plot_positions(). \n move() called without args will require further manual input \n \n Try something like picomotor.move(alias=\'flex\',step_size=5) or picomotor.move() \n')
+# picomotor_COMPORT = 'COM4'
+# picomotor = MSerial(picomotor_COMPORT)
+# print('\n INFO: picomotor has methods picomotor.move(alias=ALIAS_HERE, step_size=STEP_SIZE_HERE), picomotor.plot_positions(). \n move() called without args will require further manual input \n \n Try something like picomotor.move(alias=\'flex\',step_size=5) or picomotor.move() \n')
+
+
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QPlainTextEdit,
+                             QHBoxLayout, QVBoxLayout, QWidget, QInputDialog, QLineEdit, QMessageBox,
+                             QRadioButton, QButtonGroup, QCheckBox, QLabel)
+from PyQt5.QtCore import QProcess
+from PyQt5.QtGui import QFont, QIntValidator
+import sys
+
+
+class PicomotorGUI(QMainWindow):
+    def __init__(self, PICOMOTOR_COMPORT='COM4'):
+        super().__init__()
+
+################DELETE AFTER GUI TESTING#####################################
+        # aliases = {'DShape horiz': (1, 0),
+        #            'CODT horiz': (1, 1), 'CODT vert': (1, 2),
+        #            'DShape vert': (2, 0),
+        #            'Downleg horiz': (2, 1), 'Downleg vert': (2, 2),
+        #            'PODT horiz': (3, 0), 'PODT vert': (3, 1),
+        #            'unused': (3, 2),
+        #            }.keys()
+#############################################################################
+
+        self.picomotor = MSerial(PICOMOTOR_COMPORT)
+        aliases = self.picomotor.aliases.keys()
+
+        self.setWindowTitle('Picomotor')
+
+        # create motor buttons
+        self.selectmotor_buttons = QButtonGroup()
+        motorVBox = QVBoxLayout()
+        for alias in aliases:
+            button_name = alias.replace(' ', '_') + 'radiobutton'
+            setattr(self, button_name, QRadioButton(alias))
+            button = getattr(self, button_name)
+            button.toggled.connect(
+                self.set_active_motor)
+            self.selectmotor_buttons.addButton(button)
+            motorVBox.addWidget(button)
+
+        # create step size input widget
+        self.step_size_input = QLineEdit()
+        self.step_size_input.setValidator(QIntValidator(-2000, 2000))
+        self.step_size_input.returnPressed.connect(self.send_move_cmd)
+        motorVBox.addWidget(QLabel('Enter step size:'))
+        motorVBox.addWidget(self.step_size_input)
+        self.move_button = QPushButton("move")
+        self.move_button.pressed.connect(self.send_move_cmd)
+        motorVBox.addWidget(self.move_button)
+        w = QWidget()
+        w.setLayout(motorVBox)
+        self.setCentralWidget(w)
+
+    def send_move_cmd(self):
+        step_size = int(self.step_size_input.text())
+        self.picomotor.move(alias=self.active_motor, step_size=step_size)
+        print('sending self.picomotor.move(alias={active_motor}, step_size={step_size}).'.format(
+            active_motor=self.active_motor, step_size=str(step_size)))
+
+    def set_active_motor(self):
+        radioBtn = self.sender()
+        if radioBtn.isChecked():
+            motor_alias = radioBtn.text()
+            self.active_motor = motor_alias
+            print(self.active_motor + ' selected.')
+
+
+app = QApplication(sys.argv)
+app.setStyle('Fusion')
+
+w = PicomotorGUI()
+w.show()
+
+app.exec_()
