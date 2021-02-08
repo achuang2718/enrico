@@ -6,6 +6,7 @@ import serial
 import os
 import time
 import datetime
+from parse import *
 
 DEFAULT_LOG_FILE_STRING = "Ion_Pump_Log" 
 MPC_DEFAULT_ADDRESS = 5
@@ -38,7 +39,7 @@ class IonPump:
         can_control: bool, whether the class is allowed to make changes to the pump (i.e. turn on and off) or only to read
     """
     def __init__(self, pump_label, COM_PORT, address = None, echo = False, wait_time = 0.1, sendwidget = None, recvwidget = None,
-                history_file_string = None, log_history = True, overwrite_history = False, can_control = False):
+                can_control = False):
         #Default port settings for ion pumps
         PORT_SETTINGS = {'baudrate':9600, 'bytesize':serial.EIGHTBITS, 'parity':serial.PARITY_NONE, 'stopbits':serial.STOPBITS_ONE, 'timeout':1}
         self.serial_port = serial.Serial(COM_PORT, **PORT_SETTINGS)
@@ -47,8 +48,6 @@ class IonPump:
         self.wait_time = wait_time
         self.sendwidget = sendwidget
         self.recvwidget = recvwidget
-        self.log_history = log_history
-        self.overwrite_history = overwrite_history
         self.can_control = can_control
         if(address is None):
             if(pump_label == "mpc"):
@@ -61,7 +60,12 @@ class IonPump:
 
     def __enter__(self):
         return self 
+
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.serial_port.close()
     """
+
     Sends an arbitrary command to the ion pump
 
     Args: 
@@ -105,8 +109,8 @@ class IonPump:
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
         current_measure_command = self._make_command(CURRENT_MEASURE_CODE, data_field = data_field)
-        current_bytes_list = self.send_and_get_response(current_measure_command)
-        current_value = self.parse_current_bytes(current_bytes_list)
+        current_bytes = self.send_and_get_response(current_measure_command)
+        current_value = self.parse_current_bytes(current_bytes)
         return current_value 
 
     """Measures ion pump pressure."""
@@ -117,8 +121,8 @@ class IonPump:
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
         pressure_measure_command = self._make_command(PRESSURE_MEASURE_CODE, data_field = data_field) 
-        pressure_bytes_list = self.send_and_get_response(pressure_measure_command)
-        pressure_value = self.parse_pressure_bytes(pressure_bytes_list) 
+        pressure_bytes = self.send_and_get_response(pressure_measure_command)
+        pressure_value = self.parse_pressure_bytes(pressure_bytes) 
         return pressure_value 
 
     """Measures ion pump voltage"""
@@ -129,8 +133,8 @@ class IonPump:
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
         voltage_measure_command = self._make_command(VOLTAGE_MEASURE_CODE, data_field = data_field)
-        voltage_bytes_list = self.send_and_get_response(voltage_measure_command)
-        voltage_value = self.parse_voltage_bytes(voltage_bytes_list) 
+        voltage_bytes = self.send_and_get_response(voltage_measure_command)
+        voltage_value = self.parse_voltage_bytes(voltage_bytes) 
         return voltage_value 
 
     """Convenience method to turn off the pump.
@@ -148,8 +152,8 @@ class IonPump:
         try:
             if(self.pump_label == "spc"):
                 turn_off_command = self._make_command(TURN_OFF_CODE)
-                response_bytes_list = self.send_and_get_response(turn_off_command)
-                response_string = response_bytes_list[0].decode("ASCII")
+                response_bytes = self.send_and_get_response(turn_off_command)
+                response_string = response_bytes.decode("ASCII")
                 status_code = response_string[3:5]
                 if(status_code == "OK"):
                     return True
@@ -237,33 +241,35 @@ class IonPump:
         return command_final 
 
     @staticmethod
-    def parse_current_bytes(current_bytes_list):
-        current_string = current_bytes_list[0].decode("ASCII")
+    def parse_current_bytes(current_bytes):
+        current_string = current_bytes.decode("ASCII")
         status_code = current_string[3:5]
         if(status_code == "OK"):
-            current_value_string = current_string[9:15]
+            #Search function imported from parse module
+            current_value_string = search('OK 00 {} ', current_string)[0]
             current_value = float(current_value_string)
             return current_value
         else:
+
             return -1
         
     @staticmethod
-    def parse_pressure_bytes(pressure_bytes_list):
-        pressure_string = pressure_bytes_list[0].decode("ASCII")
+    def parse_pressure_bytes(pressure_bytes):
+        pressure_string = pressure_bytes.decode("ASCII")
         status_code = pressure_string[3:5]
         if(status_code == "OK"):
-            pressure_value_string = pressure_string[9:15]
+            pressure_value_string = search('OK 00 {} ', pressure_string)[0]
             pressure_value = float(pressure_value_string) 
             return pressure_value
         else:
             return -1
 
     @staticmethod
-    def parse_voltage_bytes(voltage_bytes_list):
-        voltage_string = voltage_bytes_list[0].decode("ASCII")
+    def parse_voltage_bytes(voltage_bytes):
+        voltage_string = voltage_bytes.decode("ASCII")
         status_code = voltage_string[3:5]
         if(status_code == "OK"):
-            voltage_value_string = voltage_string[9:13]
+            voltage_value_string = search('OK 00 {} ', voltage_string)[0]
             voltage_value = int(voltage_value_string)
             return voltage_value 
         else:
@@ -292,7 +298,8 @@ class IonPump:
 
     def send_and_get_response(self, command, add_checksum_and_end = False):
         self.send(command, add_checksum_and_end= add_checksum_and_end)
-        return self.serial_port.readlines()
+        #Ion pump responses end with a carriage return
+        return self.serial_port.read_until("\r".encode("ASCII"))
 
 
     # def sendrecv(self, cmd):
@@ -354,12 +361,3 @@ class IonPump:
             print(msg, flush=True)
         else:
             widget.value = msg
-
-    # def sendrecv(self, cmd):
-    #     """Send a command and (optionally) printing the picomotor driver's response."""
-    #     res = self.send(cmd)
-    #     if self.echo:
-    #         time.sleep(self.wait)
-    #         ret_str = self.readlines()
-    #         self.log(ret_str, widget=self.recvwidget)
-    #     return res
