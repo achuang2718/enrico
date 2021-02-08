@@ -243,6 +243,7 @@ class PicomotorGUI(QMainWindow):
         # create step size input widget
         self.step_size_input = QLineEdit()
         self.step_size_input.setValidator(QIntValidator(-2000, 2000))
+        self.step_size_input.returnPressed.connect(self.send_move_cmd)
         motorVBox.addWidget(QLabel('Enter step size:'))
         motorVBox.addWidget(self.step_size_input)
         self.move_button = QPushButton("move")
