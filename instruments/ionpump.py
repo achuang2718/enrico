@@ -145,8 +145,8 @@ class IonPump:
     Returns:
     A boolean. True if the pump was successfully turned off, False otherwise.
     """
-    def turn_off_pump(self, supply_index):
-        if(not can_control):
+    def turn_off_pump(self, supply_index = None):
+        if(not self.can_control):
             return False
         TURN_OFF_CODE = '38'
         try:
@@ -164,15 +164,15 @@ class IonPump:
                 data_field_2 = '2'
                 if(supply_index == None or supply_index == 1):
                     turn_off_command_1 = self._make_command(TURN_OFF_CODE, data_field = data_field_1)
-                    response_1_bytes_list = self.send_and_get_response(turn_off_command_1) 
-                    response_1_string = response_1_bytes_list[0].decode("ASCII")
+                    response_1_bytes = self.send_and_get_response(turn_off_command_1) 
+                    response_1_string = response_1_bytes.decode("ASCII")
                     response_1_status_code = response_1_string[3:5]
                     if(not response_1_status_code == "OK"):
                         return False 
-                if(supply_index == None or supply_index = 2):
+                if(supply_index == None or supply_index == 2):
                     turn_off_command_2 = self._make_command(TURN_OFF_CODE, data_field = data_field_2)
-                    response_2_bytes_list = self.send_and_get_response(turn_off_command_2) 
-                    response_2_string = response_2_bytes_list[0].decode("ASCII")
+                    response_2_bytes = self.send_and_get_response(turn_off_command_2) 
+                    response_2_string = response_2_bytes.decode("ASCII")
                     response_2_status_code = response_2_string[3:5]
                     if(not response_2_status_code == "OK"):
                         return False 
@@ -180,15 +180,15 @@ class IonPump:
         except IndexError as e:
             return False
 
-    def turn_on_pump(self):
-        if(not can_control):
+    def turn_on_pump(self, supply_index = None):
+        if(not self.can_control):
             return False
         TURN_ON_CODE = '37'
         try:
             if(self.pump_label == "spc"):
                 turn_on_command = self._make_command(TURN_ON_CODE)
-                response_bytes_list = self.send_and_get_response(turn_on_command)
-                response_string = response_bytes_list[0].decode("ASCII")
+                response_bytes = self.send_and_get_response(turn_on_command)
+                response_string = response_bytes.decode("ASCII")
                 status_code = response_string[3:5]
                 if(status_code == "OK"):
                     return True
@@ -199,15 +199,15 @@ class IonPump:
                 data_field_2 = '2'
                 if(supply_index == None or supply_index == 1):
                     turn_on_command_1 = self._make_command(TURN_ON_CODE, data_field = data_field_1)
-                    response_1_bytes_list = self.send_and_get_response(turn_on_command_1) 
-                    response_1_string = response_1_bytes_list[0].decode("ASCII")
+                    response_1_bytes = self.send_and_get_response(turn_on_command_1) 
+                    response_1_string = response_1_bytes.decode("ASCII")
                     response_1_status_code = response_1_string[3:5]
                     if(not response_1_status_code == "OK"):
                         return False 
                 if(supply_index == None or supply_index == 2):
                     turn_on_command_2 = self._make_command(TURN_ON_CODE, data_field = data_field_2)
-                    response_2_bytes_list = self.send_and_get_response(turn_on_command_2) 
-                    response_2_string = response_2_bytes_list[0].decode("ASCII")
+                    response_2_bytes = self.send_and_get_response(turn_on_command_2) 
+                    response_2_string = response_2_bytes.decode("ASCII")
                     response_2_status_code = response_2_string[3:5]
                     if(not response_2_status_code == "OK"):
                         return False
