@@ -94,8 +94,6 @@ class StatusMonitor:
 
 
 
-
-
     def warn_on_slack(self, warning_message):
         print(warning_message)
         now = datetime.datetime.now()
