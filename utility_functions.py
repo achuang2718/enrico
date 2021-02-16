@@ -1,9 +1,11 @@
 import json
 import time
 from json import JSONDecodeError
+import numpy as np
+import matplotlib.pyplot as plt
 
 
-def fancy_plot(x, y, fmt='', **kwargs):
+def fancy_plot(x, y, fmt='', ax = None, **kwargs):
     """Wraps around matplotlib.pyplot (aliased to plt) with last-point highlighting and statistics
 
     Plots x and y as in plt.plot, but a) averages together y-values with the same x-value and calculates and plots 
@@ -13,8 +15,9 @@ def fancy_plot(x, y, fmt='', **kwargs):
         x: The x-data to be plotted. Assumed to be an iterable with contents of
             numeric type, including possibly np.nan
         y: The y-data to be plotted. Same assumptions on type.
-        fmt: The format string. In contrast to plt.plot, it is a kwarg.
-        kwargs: Any kwarg that can be passed to plt.errorbar.
+        fmt: The format string. In contrast to ax.plot, it is a kwarg.
+        ax: The axes object on which to plot. If None, plt.gca() is called. 
+        kwargs: Any kwarg that can be passed to ax.errorbar.
 
     Returns:
         ErrorbarContainer, as detailed in the docs for plt.errorbar
@@ -22,9 +25,8 @@ def fancy_plot(x, y, fmt='', **kwargs):
     Raises:
         ValueError if x and y are not of the same length
     """
-
-    import numpy as np
-    import matplotlib.pyplot as plt
+    if(ax == None):
+        ax = plt.gca()
     if(len(x) != len(y)):
         raise ValueError(
             "The input x and y arrays must be of the same length.")
@@ -79,9 +81,67 @@ def fancy_plot(x, y, fmt='', **kwargs):
     final_error_values = np.array(final_error_list)
     # Plot the most recent point with a hardcoded but distinctive black diamond symbol
     if(most_recent_xy_pair != None):
-        plt.plot(most_recent_xy_pair[0], most_recent_xy_pair[1], 'dr')
+        ax.plot(most_recent_xy_pair[0], most_recent_xy_pair[1], 'dr')
     # Plot and return the errorbar graph with the input kwargs
-    return plt.errorbar(final_x_values, final_y_values, final_error_values, fmt=fmt, **kwargs)
+    return ax.errorbar(final_x_values, final_y_values, final_error_values, fmt=fmt, **kwargs)
+
+
+"""Initializes a live-plot figure
+
+    Creates and returns a new figure on which data can be live-plotted, which 
+    displays as a new window.
+
+    Parameters:
+
+    num: int or str, optional. If passed, piped to matplotlib.pyplot.figure as num. Default None 
+    can_make_interactive: bool. If true, the initialization function is allowed to turn on interactive mode 
+        (which could interfere with other plotting). Default True. 
+
+    Returns:
+    (fig, ax)
+    figure: A matplotlib.pyplot.Figure instance created by the method 
+    ax: A matplotlib.pyplot.Axes instance attached to figure; this is what does the actual plotting
+"""
+
+def initialize_live_plot(num = None, can_make_interactive = True):
+    if(can_make_interactive and not plt.isinteractive()):
+        plt.ion() 
+    fig = plt.figure(num = num) 
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+    return (fig, ax)
+
+
+"""Updates a live_plot figure 
+
+    Plots new data to a live-plotting figure object (or to the currently active one).
+    Optionally does this in fancy_plot format.
+
+    Parameters:
+
+    x, y, fmt, **kwargs: Identical to those for ax.plot() 
+    fancy: If true, applies fancy_plot to the input data, instead of plot
+    ax: The Axes object on which the data should be live-plotted. If None, plt.gca() is called. 
+    pause_length: The amount of time passed to plt.pause() to allow drawing. Default 0.001. 
+"""
+def update_live_plot(x, y, fmt = '', ax = None, fancy = False, pause_length = 0.001, **kwargs):
+    if(ax == None):
+        ax = plt.gca() 
+    ax.clear() 
+    if(fancy):
+        fancy_plot(x, y, fmt = fmt, ax = ax, **kwargs)
+    else:
+        ax.plot(x, y, fmt, **kwargs) 
+    plt.draw()
+    plt.pause(pause_length)
+    
+    
+
+    
+
+
+
+
+
 
 
 def load_breadboard_client():
