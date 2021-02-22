@@ -121,12 +121,14 @@ def initialize_live_plot(num = None, can_make_interactive = True):
     x, y, fmt, **kwargs: Identical to those for ax.plot() 
     fancy: If true, applies fancy_plot to the input data, instead of plot
     ax: The Axes object on which the data should be live-plotted. If None, plt.gca() is called. 
-    pause_length: The amount of time passed to plt.pause() to allow drawing. Default 0.001. 
+    pause_length: The amount of time passed to plt.pause() to allow drawing. Default 0.001.
+    clear_previous: Whether to clear the previous curves off of the live plot when a new one is plotted. Default True. 
 """
-def update_live_plot(x, y, fmt = '', ax = None, fancy = False, pause_length = 0.001, **kwargs):
+def update_live_plot(x, y, fmt = '', ax = None, fancy = False, clear_previous = True, pause_length = 0.001, **kwargs):
     if(ax == None):
         ax = plt.gca() 
-    ax.clear() 
+    if(clear_previous):
+        ax.clear()
     if(fancy):
         fancy_plot(x, y, fmt = fmt, ax = ax, **kwargs)
     else:
