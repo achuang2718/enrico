@@ -9,6 +9,8 @@ analysis_config.json
 
 API_CONFIG_fermi1.json
 
+analysis_config.json
+
 
 breadboard_path_config.json
 
@@ -42,6 +44,9 @@ breadboard-python-client/
 
 images/
 202011/
-*.spe
+
+*dailynb.ipynb
+
 *.png
 *.csv
+*.spe
