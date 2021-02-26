@@ -37,17 +37,15 @@ class IonGauge:
             self.address = DEFAULT_ADDRESS
         else:
             self.address = address
-        self.address_string = self.get_address_string(self.address)
+        self.address_string = self.get_address_string()
         # command format: '# {XGS-600 address} {command number} {optional data} {carriage return}'
         # I1 denotes hot filament ion gauge no. 1,
         # TODO: add filament index as argument if we revive filament 2 on the controller
-        self.off_cmd = bytes('#{address}30I1\r'.format(
-            address=self.address_string), encoding='ASCII')
         self.on_cmd = bytes('#{address}31I1\r'.format(
             address=self.address_string), encoding='ASCII')
 
-    def get_address_string(self):
     """Create address_string for constructing commands in init. """
+    def get_address_string(self):
         address_string = hex(self.address)[2:]
         address_string = address_string.upper()
         if(self.address < 16):
@@ -76,24 +74,29 @@ class IonGauge:
         self.send(command)
         return self.serial_port.read_until("\r".encode("ASCII"))
 
-    def turn_on(self):
     """Turns on the filament, requires 10 seconds warmup time before making measurements."""
-        self.send_and_get_response(self.on_cmd)
-        time.sleep(10)
-
-    def turn_off(self):
-    """Turns off the filament."""
-        self.send_and_get_response(self.off_cmd)
-
-    def measure_pressure(self, filament_index = 1):
-    """Returns the pressure in Torr as a float."""
+    def turn_on(self, filament_index = 1):
         if(filament_index == 1):
-            read_cmd = bytes('#{address}02I1\r'.format(
-            address=self.address_string), encoding='ASCII')
+            on_cmd = '#{address}31I1\r'.format(
+            address=self.address_string)
         elif(filament_index == 2):
-            read_cmd = bytes('#{address}02I2\r'.format(
-            address=self.address_string), encoding='ASCII')
-        pressure_bytes = self.send_and_get_response()
+            on_cmd = '#{address}33I1\r'.format(
+            address=self.address_string)
+        self.send_and_get_response(on_cmd)
+        #TODO: Handle this better!
+        # time.sleep(10)
+
+    """Turns off the filament."""
+    def turn_off(self):
+        off_cmd = '#{address}30I1\r'.format(
+            address=self.address_string)
+        self.send_and_get_response(off_cmd)
+
+    """Returns the pressure in Torr as a float."""
+    def measure_pressure(self):
+        read_cmd = '#{address}02I1\r'.format(
+            address=self.address_string)
+        pressure_bytes = self.send_and_get_response(read_cmd)
         return self.parse_pressure_bytes(pressure_bytes)
 
     @staticmethod
