@@ -1,5 +1,6 @@
 from status_monitor import StatusMonitor
 from ionpump import IonPump 
+from iongauge import IonGauge
 import numpy as np 
 import time 
 
@@ -30,13 +31,13 @@ class VacuumMonitor(StatusMonitor):
             'voltage1', 'voltage2': Supported for 'pump_mpc' 
             'current1, current2': Supported for 'pump_mpc'
         warning_threshold_dict: A dictionary {read_key:Max Value} of combinations of keys and maximum allowed values before a warning is sent
-        Keys are all of the values in inst_read_key. May be empty. 
-        keyword_dict: A dictionary of any keywords that should be passed to the instrument constructor
+        Keys are all of the values in inst_read_key. May be empty or none. 
+        keyword_dict: A dictionary of any keywords that should be passed to the instrument constructor. May be empty.
         
     """
-    def init(self, vacuum_instrument_tuple_list, warning_interval_in_min = 10, local_log_filename = "DEFAULT.csv", can_slack_warn = True):
+    def __init__(self, instrument_tuple_list, warning_interval_in_min = 10, local_log_filename = "DEFAULT.csv", can_slack_warn = True):
         super().__init__(warning_interval_in_min = warning_interval_in_min, local_log_filename = local_log_filename)
-        self.can_slack_warn()
+        self.can_slack_warn = can_slack_warn
         self.instrument_list = [] 
         self.instrument_names_list = [] 
         self.instrument_warning_dicts_list = []
@@ -71,15 +72,24 @@ class VacuumMonitor(StatusMonitor):
         
 
 
-
+    #TODO: Add support for uploading to breadboard
+    #TODO: Add support for plotting
     def monitor_once(self, log_local = True):
-        pass 
+        overall_dict = {}
+        for instrument, instrument_name, instrument_read_keys, warning_threshold_dict in zip(self.instrument_list, self.instrument_names_list, 
+                                                                                            self.instrument_read_keys_list, self.instrument_warning_dicts_list):
+            instrument_dict = self._monitor_pump_helper(instrument, instrument_name, instrument_read_keys, warning_threshold_dict)
+            for key in instrument_dict:
+                overall_dict[key] = instrument_dict[key]
+        if(log_local):
+            self.log_values_locally(overall_dict) 
+        return overall_dict
 
     def _monitor_pump_helper(self, instrument, instrument_name, instrument_read_keys, warning_threshold_dict):
         return_dict = {}
         for instrument_read_key in instrument_read_keys:
             read_value = self._read_helper(instrument, instrument_read_key)
-            if instrument_read_key in warning_threshold_dict:
+            if(not warning_threshold_dict is None) and (instrument_read_key in warning_threshold_dict):
                 threshold = warning_threshold_dict[instrument_read_key] 
                 if(read_value > threshold and self.can_slack_warn):
                     self.warn_on_slack("The measured value of " + instrument_read_key + " on " + instrument_name + " was " + str(read_value) + """, 
@@ -95,10 +105,10 @@ class VacuumMonitor(StatusMonitor):
             print(instrument_name)
 
 
-    def give_instrument_name 
-
+    #TODO: Handle exceptions
     @staticmethod
     def _read_helper(instrument, instrument_read_key):
+        ION_GAUGE_DELAY = 10
         if(instrument_read_key == "pressure"):
             returned_value = instrument.measure_pressure() 
         elif(instrument_read_key == "pressure1"):
@@ -117,4 +127,16 @@ class VacuumMonitor(StatusMonitor):
             returned_value = instrument.measure_voltage(1) 
         elif(instrument_read_key == "voltage2"):
             returned_value = instrument.measure_voltage(2)
+        elif(instrument_read_key == "pressurefil1"):
+            instrument.turn_on(1)
+            time.sleep(ION_GAUGE_DELAY)
+            returned_value = instrument.measure_pressure() 
+            instrument.turn_off() 
+        elif(instrument_read_key == "pressurefil2"):
+            instrument.turn_on(2) 
+            time.sleep(ION_GAUGE_DELAY) 
+            returned_value = instrument.measure_pressure()
+            instrument.turn_off() 
+        return returned_value 
+
 

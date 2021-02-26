@@ -67,6 +67,8 @@ class StatusMonitor:
 
     def log_values_locally(self, values_dict, overwrite = False, reload_df = False):
         log_exists = os.path.exists(self.local_log_filename)
+        #Do a shallow copy so that the exception handling below doesn't mess with other things
+        values_dict = values_dict.copy()
         #Cast scalar dict to dict of length 1 lists
         for key in values_dict:
             try:
