@@ -19,17 +19,18 @@ class IonGauge:
 
     Args:
         COM_PORT: str, the string describing the COM port of the pump serial connection, e.g. 'COM7'
-        address: int, the address of the pump. Default is 1 for spc, 5 for mpc
+        gauge_label: str, a string describing the type of ion gauge. Currently unused, should be passed as 'xgs-600'
         wait_time: float, the wait time for a read after a send command
         sendwidget: Widget; ignore unless making a gui
         recvwidget: Widget; ignore unless making a gui
     """
 
-    def __init__(self, COM_PORT, address=None, wait_time=0.1, sendwidget=None, recvwidget=None):
+    def __init__(self, COM_PORT, gauge_label, address=None, wait_time=0.1, sendwidget=None, recvwidget=None):
         # Default port settings for ion gauge
         PORT_SETTINGS = {'baudrate': 9600, 'bytesize': serial.EIGHTBITS,
                          'parity': serial.PARITY_NONE, 'stopbits': serial.STOPBITS_ONE, 'timeout': 1}
         self.serial_port = serial.Serial(COM_PORT, **PORT_SETTINGS)
+        self.gauge_label = gauge_label
         self.wait_time = wait_time
         self.sendwidget = sendwidget
         self.recvwidget = recvwidget
@@ -38,11 +39,6 @@ class IonGauge:
         else:
             self.address = address
         self.address_string = self.get_address_string()
-        # command format: '# {XGS-600 address} {command number} {optional data} {carriage return}'
-        # I1 denotes hot filament ion gauge no. 1,
-        # TODO: add filament index as argument if we revive filament 2 on the controller
-        self.on_cmd = bytes('#{address}31I1\r'.format(
-            address=self.address_string), encoding='ASCII')
 
     """Create address_string for constructing commands in init. """
     def get_address_string(self):

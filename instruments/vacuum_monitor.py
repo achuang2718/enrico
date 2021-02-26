@@ -23,8 +23,10 @@ class VacuumMonitor(StatusMonitor):
             'pressure': Supported for 'pump_spc'
             'voltage': Supported for 'pump_spc'
             'current': Supported for 'pump_spc'
-            'pressure1': Supported for 'gauge_xgs-600', 'pump_spc'. The number denotes the filament and supply, respectively.
-            'pressure2': Supported for 'gauge_xgs-600', 'pump_mpc'
+            'pressure1': Supported for 'pump_mpc'.
+            'pressure2': Supported for 'pump_mpc'
+            'pressurefil1': Supported for 'gauge_xgs-600'
+            'pressurefil2': Supported for 'gauge_xgs-600'
             'voltage1', 'voltage2': Supported for 'pump_mpc' 
             'current1, current2': Supported for 'pump_mpc'
         warning_threshold_dict: A dictionary {read_key:Max Value} of combinations of keys and maximum allowed values before a warning is sent
@@ -45,11 +47,11 @@ class VacuumMonitor(StatusMonitor):
             self.instrument_warning_dicts_list.append(warning_threshold_dict)
             self.instrument_read_keys_list.append(inst_read_keys)
             if(inst_type == 'pump_spc'):
-                instrument = IonPump('spc', inst_port, **keyword_dict)
+                instrument = IonPump(inst_port, 'spc', inst_port, **keyword_dict)
             elif(inst_type == 'pump_mpc'):
-                instrument = IonPump('mpc', inst_port, **keyword_dict)
+                instrument = IonPump(inst_port, 'mpc', **keyword_dict)
             elif(inst_type == 'gauge_xgs-600'):
-                instrument = IonGauge('xgs-600', **keyword_dict) 
+                instrument = IonGauge(inst_port, 'xgs-600', **keyword_dict) 
             else:
                 raise ValueError("inst_type " + inst_type + " is not supported by vacuum monitor.")
             self.instrument_list.append(instrument) 

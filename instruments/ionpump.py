@@ -38,7 +38,7 @@ class IonPump:
         overwrite_history: bool, whether the ion pump should overwrite the specified history file
         can_control: bool, whether the class is allowed to make changes to the pump (i.e. turn on and off) or only to read
     """
-    def __init__(self, pump_label, COM_PORT, address = None, echo = False, wait_time = 0.1, sendwidget = None, recvwidget = None,
+    def __init__(self, COM_PORT, pump_label, address = None, echo = False, wait_time = 0.1, sendwidget = None, recvwidget = None,
                 can_control = False):
         #Default port settings for ion pumps
         PORT_SETTINGS = {'baudrate':9600, 'bytesize':serial.EIGHTBITS, 'parity':serial.PARITY_NONE, 'stopbits':serial.STOPBITS_ONE, 'timeout':1}
