@@ -32,7 +32,7 @@ class VacuumMonitor(StatusMonitor):
             'current1, current2': Supported for 'pump_mpc'
         warning_threshold_dict: A dictionary {read_key:Max Value} of combinations of keys and maximum allowed values before a warning is sent
         Keys are all of the values in inst_read_key. May be empty or none. 
-        keyword_dict: A dictionary of any keywords that should be passed to the instrument constructor. May be empty.
+        keyword_dict: A dictionary of any keywords that should be passed to the instrument constructor. May be empty or none.
         
     """
     def __init__(self, instrument_tuple_list, warning_interval_in_min = 10, local_log_filename = "DEFAULT.csv", can_slack_warn = True):
@@ -44,11 +44,15 @@ class VacuumMonitor(StatusMonitor):
         self.instrument_read_keys_list = []
         for instrument_tuple in instrument_tuple_list: 
             inst_name, inst_port, inst_type, inst_read_keys, warning_threshold_dict, keyword_dict = instrument_tuple
+            if(keyword_dict is None):
+                keyword_dict = {} 
+            if(warning_threshold_dict is None):
+                warning_threshold_dict = {}
             self.instrument_names_list.append(inst_name)
             self.instrument_warning_dicts_list.append(warning_threshold_dict)
             self.instrument_read_keys_list.append(inst_read_keys)
             if(inst_type == 'pump_spc'):
-                instrument = IonPump(inst_port, 'spc', inst_port, **keyword_dict)
+                instrument = IonPump(inst_port, 'spc', **keyword_dict)
             elif(inst_type == 'pump_mpc'):
                 instrument = IonPump(inst_port, 'mpc', **keyword_dict)
             elif(inst_type == 'gauge_xgs-600'):
@@ -64,11 +68,16 @@ class VacuumMonitor(StatusMonitor):
         for instrument in self.instrument_list:
             instrument.__exit__(exc_type, exc_value, traceback) 
 
-    def monitor_continuously(self, log_local = True, end_time = np.inf):
+    def monitor_continuously(self, log_local = True, end_time = np.inf, iteration_time = 0.0):
         start_time = time.time() 
-        elapsed_time = 0
+        elapsed_time = 0.0
+        old_cycle_time = 0.0 
         while(elapsed_time < end_time):
-            self.monitor_once(log_local = log_local) 
+            if(elapsed_time - old_cycle_time > iteration_time):
+                foo = self.monitor_once(log_local = log_local) 
+                print(foo) 
+                old_cycle_time = elapsed_time
+            elapsed_time = time.time()
         
 
 
