@@ -11,10 +11,15 @@ import parse
 import matplotlib.pyplot as plt
 import datetime
 
-rm = visa.ResourceManager('C:\\Windows\\System32\\visa64.dll')
-scope_visa_addresses = {'near laser tables':"TCPIP0::192.168.1.9::inst0::INSTR",
-                        'near control PC':"TCPIP0::192.168.1.11::inst0::INSTR"}
+def load_scopeconfig():
+    import json
+    import os
+    with open(os.path.join(os.path.dirname(__file__), "scope_config.json")) as my_file:
+        scope_dict = json.load(my_file)
+    return scope_dict
 
+rm = visa.ResourceManager('C:\\Windows\\System32\\visa64.dll')
+scope_visa_addresses = load_scopeconfig()['visa_addresses']
 
 class Oscilloscope():
     """docstring for Oscilloscope"""
@@ -387,6 +392,7 @@ class Oscilloscope():
         Wav_Data = np.insert(Wav_Data,0,DataTime,axis=1)
         columns = ['time'] + ['ch{idx}_in_{unit}'.format(idx=str(i+1), unit=str(CH_UNITS[i])) 
                     for i in range(len(CH_UNITS))]
+        columns = [column for column in columns if 'BLANK' not in column] #purges column names referencing channels that are off
         scope_traces = pd.DataFrame(Wav_Data, 
             columns = columns)
         return scope_traces
