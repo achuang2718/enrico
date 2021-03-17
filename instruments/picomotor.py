@@ -208,6 +208,18 @@ from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QFont, QIntValidator
 import sys
 
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+
+class MplCanvas(FigureCanvasQTAgg):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        plt.style.use('seaborn')
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.ax1 = fig.add_subplot(311)
+        self.ax2 = fig.add_subplot(312)
+        self.ax3 = fig.add_subplot(313)
+        super(MplCanvas, self).__init__(fig)
 
 class PicomotorGUI(QMainWindow):
     def __init__(self, PICOMOTOR_COMPORT='COM4'):
@@ -227,6 +239,7 @@ class PicomotorGUI(QMainWindow):
         aliases = self.picomotor.aliases.keys()
 
         self.setWindowTitle('Picomotor')
+        layout = QHBoxLayout()
 
         # create motor buttons
         self.selectmotor_buttons = QButtonGroup()
@@ -249,8 +262,16 @@ class PicomotorGUI(QMainWindow):
         self.move_button = QPushButton("move")
         self.move_button.pressed.connect(self.send_move_cmd)
         motorVBox.addWidget(self.move_button)
+        self.clear_button = QPushButton("clear history")
+        self.clear_button.pressed.connect(self.clear_history)
+        motorVBox.addWidget(self.clear_button)
         w = QWidget()
-        w.setLayout(motorVBox)
+        layout.addLayout(motorVBox)
+
+        self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
+        layout.addWidget(self.canvas)
+        # w.setLayout(motorVBox)
+        w.setLayout(layout)
         self.setCentralWidget(w)
 
     def send_move_cmd(self):
@@ -258,6 +279,25 @@ class PicomotorGUI(QMainWindow):
         self.picomotor.move(alias=self.active_motor, step_size=step_size)
         print('sending self.picomotor.move(alias={active_motor}, step_size={step_size}).'.format(
             active_motor=self.active_motor, step_size=str(step_size)))
+        #plot picomotor histories
+        i = 0
+        history = self.picomotor.history
+        axes = [self.sc.ax1, self.sc.ax2, self.sc.ax3]
+        for driver_key in history:
+            ax = axes[i]
+            i += 1
+            for motor_key in history[driver_key]:
+                x_data = list(history[driver_key][motor_key].keys())
+                y_data = np.cumsum(
+                    list(history[driver_key][motor_key].values()))
+                label = get_key(
+                    self.picomotor.aliases.keys(), (int(driver_key), int(motor_key)))
+                ax.plot(x_data, y_data, marker='o',
+                         linestyle='dashed', label=label)
+                ax.legend(loc='best')
+                ax.set_xlabel('time (TODO: formatting)')
+                ax.set_ylabel('position')
+        self.sc.draw()
 
     def set_active_motor(self):
         radioBtn = self.sender()
@@ -265,6 +305,14 @@ class PicomotorGUI(QMainWindow):
             motor_alias = radioBtn.text()
             self.active_motor = motor_alias
             print(self.active_motor + ' selected.')
+
+    def clear_history(self):
+        axes = [self.sc.ax1, self.sc.ax2, self.sc.ax3]
+        for ax in axes:
+            ax.cla()
+        self.sc.draw()
+        self.picomotor.history = {}
+
 
 
 app = QApplication(sys.argv)
