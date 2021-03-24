@@ -83,13 +83,15 @@ class VacuumMonitor(StatusMonitor):
 
     #TODO: Add support for uploading to breadboard
     #TODO: Add support for plotting
-    def monitor_once(self, log_local = True):
+    def monitor_once(self, log_local = True, add_time = True):
         overall_dict = {}
         for instrument, instrument_name, instrument_read_keys, warning_threshold_dict in zip(self.instrument_list, self.instrument_names_list, 
                                                                                             self.instrument_read_keys_list, self.instrument_warning_dicts_list):
             instrument_dict = self._monitor_pump_helper(instrument, instrument_name, instrument_read_keys, warning_threshold_dict)
             for key in instrument_dict:
                 overall_dict[key] = instrument_dict[key]
+        if(add_time):
+            overall_dict["Time"] = time.strftime("%y-%m-%d %H:%M:%S")
         if(log_local):
             self.log_values_locally(overall_dict) 
         return overall_dict
