@@ -19,17 +19,18 @@ class IonGauge:
 
     Args:
         COM_PORT: str, the string describing the COM port of the pump serial connection, e.g. 'COM7'
-        address: int, the address of the pump. Default is 1 for spc, 5 for mpc
+        gauge_label: str, a string describing the type of ion gauge. Currently unused, should be passed as 'xgs-600'
         wait_time: float, the wait time for a read after a send command
         sendwidget: Widget; ignore unless making a gui
         recvwidget: Widget; ignore unless making a gui
     """
 
-    def __init__(self, COM_PORT, address=None, wait_time=0.1, sendwidget=None, recvwidget=None):
+    def __init__(self, COM_PORT, gauge_label, address=None, wait_time=0.1, sendwidget=None, recvwidget=None):
         # Default port settings for ion gauge
         PORT_SETTINGS = {'baudrate': 9600, 'bytesize': serial.EIGHTBITS,
                          'parity': serial.PARITY_NONE, 'stopbits': serial.STOPBITS_ONE, 'timeout': 1}
         self.serial_port = serial.Serial(COM_PORT, **PORT_SETTINGS)
+        self.gauge_label = gauge_label
         self.wait_time = wait_time
         self.sendwidget = sendwidget
         self.recvwidget = recvwidget
@@ -37,19 +38,10 @@ class IonGauge:
             self.address = DEFAULT_ADDRESS
         else:
             self.address = address
-        self.address_string = self.get_address_string(self.address)
-        # command format: '# {XGS-600 address} {command number} {optional data} {carriage return}'
-        # I1 denotes hot filament ion gauge no. 1,
-        # TODO: add filament index as argument if we revive filament 2 on the controller
-        self.off_cmd = bytes('#{address}30I1\r'.format(
-            address=self.address_string), encoding='ASCII')
-        self.on_cmd = bytes('#{address}31I1\r'.format(
-            address=self.address_string), encoding='ASCII')
-        self.read_cmd = bytes('#{address}02I1\r'.format(
-            address=self.address_string), encoding='ASCII')
+        self.address_string = self.get_address_string()
 
-    def get_address_string(self):
     """Create address_string for constructing commands in init. """
+    def get_address_string(self):
         address_string = hex(self.address)[2:]
         address_string = address_string.upper()
         if(self.address < 16):
@@ -76,27 +68,37 @@ class IonGauge:
 
     def send_and_get_response(self, command):
         self.send(command)
-        return self.serial_port.readlines()
+        return self.serial_port.read_until("\r".encode("ASCII"))
 
-    def turn_on(self):
     """Turns on the filament, requires 10 seconds warmup time before making measurements."""
-        self.send_and_get_response(self.on_cmd)
-        time.sleep(10)
+    def turn_on(self, filament_index = 1):
+        if(filament_index == 1):
+            on_cmd = '#{address}31I1\r'.format(
+            address=self.address_string)
+        elif(filament_index == 2):
+            on_cmd = '#{address}33I1\r'.format(
+            address=self.address_string)
+        self.send_and_get_response(on_cmd)
+        #TODO: Handle this better!
+        # time.sleep(10)
 
-    def turn_off(self):
     """Turns off the filament."""
-        self.send_and_get_response(self.off_cmd)
+    def turn_off(self):
+        off_cmd = '#{address}30I1\r'.format(
+            address=self.address_string)
+        self.send_and_get_response(off_cmd)
 
-    def measure_pressure(self):
     """Returns the pressure in Torr as a float."""
-        pressure_byte_list = self.send_and_get_response(self.read_cmd)
-        return self.parse_pressure_bytes(pressure_byte_list)
+    def measure_pressure(self):
+        read_cmd = '#{address}02I1\r'.format(
+            address=self.address_string)
+        pressure_bytes = self.send_and_get_response(read_cmd)
+        return self.parse_pressure_bytes(pressure_bytes)
 
     @staticmethod
-    def parse_pressure_bytes(pressure_bytes_list):
-        pressure_bytes = pressure_byte_list[0]
+    def parse_pressure_bytes(pressure_bytes):
         pressure_string = pressure_bytes.decode("ASCII")
-        if pressure_string == '?FF':
+        if pressure_string != '?FF':
             # The XGS-600 sends ?FF as a response if the command or data is invalid, or if the command
             # length is incorrect. There is no response to a wrong address, or lack of termination
             # character.
@@ -106,65 +108,65 @@ class IonGauge:
             return -1
 
 
-if __name__ == '__main__':
-    # TODO re-write this to conform with StatusMonitor class
-    # TODO needs testing
-    user_input = input('Turn on ion gauge and query continuously? [y/n]: ')
-    if user_input == 'y':
-        import datetime
-        import pandas as pd
-        PRESSURE_ABORT_VALUE = 1e-4
-        DATETIME_FMT = '%Y-%m-%d %H:%M:%S'
-        COM_PORT = 'COM5'
-        LOG_FILENAME = 'iongaugelog.csv'
-        TIME_SPAN = 3600  # in seconds
-        MARKER = '-'
+# if __name__ == '__main__':
+#     # TODO re-write this to conform with StatusMonitor class
+#     # TODO needs testing
+#     user_input = input('Turn on ion gauge and query continuously? [y/n]: ')
+#     if user_input == 'y':
+#         import datetime
+#         import pandas as pd
+#         PRESSURE_ABORT_VALUE = 1e-4
+#         DATETIME_FMT = '%Y-%m-%d %H:%M:%S'
+#         COM_PORT = 'COM5'
+#         LOG_FILENAME = 'iongaugelog.csv'
+#         TIME_SPAN = 3600  # in seconds
+#         MARKER = '-'
 
-        def live_plotter(my_dict):
-        """Logs locally to LOG_FILENAME .csv and outputs a .png plot showing the most recent data"""
-            df = pd.DataFrame(my_dict, index=[0])
-            if not os.path.exists(LOG_FILENAME):
-                df.to_csv(LOG_FILENAME, index=False)
-            else:
-                existing_df = pd.read_csv(LOG_FILENAME)
-                df = pd.concat([existing_df, df], ignore_index=False)
-                df.to_csv(LOG_FILENAME, index=False)
-            plt.rcParams["date.autoformatter.minute"] = "%H:%M"
-            my_datetimes = [datetime.datetime.strptime(time_str, DATETIME_FMT)
-                            for time_str in df['time']]
-            num_plt_pts = sum([((my_datetimes[-1] - dt).total_seconds() < TIME_SPAN)
-                               for dt in my_datetimes])  # < MAX_TIME
-            if TIME_SPAN is None:
-                x, y = my_datetimes, df['pressure (Torr)']
-            else:
-                x, y = my_datetimes[-num_plt_pts:-
-                                    1], df['pressure (Torr)'][-num_plt_pts:-1]
-            plt.semilogy(x, y, MARKER)
-            plt.xticks(rotation=90)
-            plt.axis('tight')
-            plt.xlabel('time')
-            plt.ylabel('pressure (Torr)')
-            plt.savefig(LOG_FILENAME[:-4] + '.png', bbox_inches='tight')
-            plt.cla()
+#         def live_plotter(my_dict):
+#         """Logs locally to LOG_FILENAME .csv and outputs a .png plot showing the most recent data"""
+#             df = pd.DataFrame(my_dict, index=[0])
+#             if not os.path.exists(LOG_FILENAME):
+#                 df.to_csv(LOG_FILENAME, index=False)
+#             else:
+#                 existing_df = pd.read_csv(LOG_FILENAME)
+#                 df = pd.concat([existing_df, df], ignore_index=False)
+#                 df.to_csv(LOG_FILENAME, index=False)
+#             plt.rcParams["date.autoformatter.minute"] = "%H:%M"
+#             my_datetimes = [datetime.datetime.strptime(time_str, DATETIME_FMT)
+#                             for time_str in df['time']]
+#             num_plt_pts = sum([((my_datetimes[-1] - dt).total_seconds() < TIME_SPAN)
+#                                for dt in my_datetimes])  # < MAX_TIME
+#             if TIME_SPAN is None:
+#                 x, y = my_datetimes, df['pressure (Torr)']
+#             else:
+#                 x, y = my_datetimes[-num_plt_pts:-
+#                                     1], df['pressure (Torr)'][-num_plt_pts:-1]
+#             plt.semilogy(x, y, MARKER)
+#             plt.xticks(rotation=90)
+#             plt.axis('tight')
+#             plt.xlabel('time')
+#             plt.ylabel('pressure (Torr)')
+#             plt.savefig(LOG_FILENAME[:-4] + '.png', bbox_inches='tight')
+#             plt.cla()
 
-        print('Opening ' + COM_PORT)
-        ion_gauge = IonGauge(COM_PORT)
-        ion_gauge.turn_on()
-        print("Gauge turned on!")
-        while True:
-            try:
-                pressure_float = ion_gauge.measure_pressure()
-                current_time_string = datetime.datetime.now().strftime(DATETIME_FMT)
-                print("Gauge read at: " + current_time_string +
-                      " Pressure is: " + str(pressure_float) + "Torr")
-                if(pressure_float > PRESSURE_ABORT_VALUE):
-                    raise ValueError("Pressure too high.")
-                my_dict = {'time': current_time_string,
-                           'pressure (Torr)': pressure_float}
-                live_plotter(my_dict)
-            except BaseException as e:
-                print("Exception encountered. Aborting and shutting down.")
-                ion_gauge.turn_off()
-                raise e
-    else:
-        print('exiting.')
+#         print('Opening ' + COM_PORT)
+#         ion_gauge = IonGauge(COM_PORT)
+#         ion_gauge.turn_on()
+#         print("Gauge turned on!")
+#         while True:
+#             try:
+#                 pressure_float = ion_gauge.measure_pressure()
+#                 current_time_string = datetime.datetime.now().strftime(DATETIME_FMT)
+#                 print("Gauge read at: " + current_time_string +
+#                       " Pressure is: " + str(pressure_float) + "Torr")
+#                 if(pressure_float > PRESSURE_ABORT_VALUE):
+#                     raise ValueError("Pressure too high.")
+#                 my_dict = {'time': current_time_string,
+#                            'pressure (Torr)': pressure_float}
+#                 live_plotter(my_dict)
+#             except BaseException as e:
+#                 print("Exception encountered. Aborting and shutting down.")
+#                 ion_gauge.turn_off()
+#                 raise e
+#     else:
+#         print('exiting.')
