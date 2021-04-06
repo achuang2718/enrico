@@ -281,6 +281,9 @@ class ImageWatchdog():
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         watchdog = ImageWatchdog()
+        #for quick switching between dual and triple imaging
+        # n_images = int(input('Enter number of image files per shot: '))
+        # watchdog.main(num_images_per_shot=n_images)
         watchdog.main()
     elif len(sys.argv) == 3:
         runfolder = sys.argv[1]
