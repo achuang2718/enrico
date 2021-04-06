@@ -170,18 +170,27 @@ yvars_display = widgets.Select(
     disabled=False,
 )
 
+seqMode_display = widgets.Select(
+    options=[],
+    disabled=False,
+)
+
 xvars_menu = widgets.Dropdown(
     options=[], description='xvar')
 yvars_menu = widgets.Dropdown(
     options=[], description='yvar')
-
+MAX_DISTINCT_SEQMODES = 6
+seqMode_menu = widgets.Dropdown(
+    options= [None] + list(range(MAX_DISTINCT_SEQMODES)), description='seqMode')
 add_plot_button = widgets.Button(description='add (xvar, yvar)')
 
 
 def add_plot(button):
-    xvars, yvars = list(xvars_display.options), list(yvars_display.options)
+    xvars, yvars, seqModes = (list(xvars_display.options), list(yvars_display.options),
+        list(seqMode_display.options))
     xvars.append(xvars_menu.value), yvars.append(yvars_menu.value)
-    xvars_display.options, yvars_display.options = xvars, yvars
+    seqModes.append(seqMode_menu.value)
+    xvars_display.options, yvars_display.options, seqMode_display.options = xvars, yvars, seqModes
 
 
 add_plot_button.on_click(add_plot)
@@ -189,18 +198,20 @@ clear_plot_button = widgets.Button(description='clear')
 
 
 def clear_plot(button):
-    xvars, yvars = list(xvars_display.options), list(yvars_display.options)
-    xvars.pop(), yvars.pop()
-    xvars_display.options, yvars_display.options = xvars, yvars
+    xvars, yvars, seqModes = (list(xvars_display.options), list(yvars_display.options),
+        list(seqMode_display.options))
+    xvars.pop(), yvars.pop(), seqModes.pop()
+    xvars_display.options, yvars_display.options, seqMode_display.options = xvars, yvars, seqModes
 
 
 clear_plot_button.on_click(clear_plot)
 
 VBox_x = widgets.VBox([xvars_menu, xvars_display])
 VBox_y = widgets.VBox([yvars_menu, yvars_display])
+VBox_seq = widgets.VBox([seqMode_menu, seqMode_display])
 VBox_buttons = widgets.VBox([add_plot_button, clear_plot_button])
 live_plot_HBox = widgets.HBox(
-    [VBox_x, VBox_y, VBox_buttons])
+    [VBox_x, VBox_y, VBox_seq, VBox_buttons])
 
 # TODO create image preview widget
 # image_viewer = widgets.Output(layout={'border': '1px solid black'})
