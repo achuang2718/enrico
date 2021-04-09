@@ -179,7 +179,7 @@ xvars_menu = widgets.Dropdown(
     options=[], description='xvar')
 yvars_menu = widgets.Dropdown(
     options=[], description='yvar')
-MAX_DISTINCT_SEQMODES = 6
+MAX_DISTINCT_SEQMODES = 10
 seqMode_menu = widgets.Dropdown(
     options= [None] + list(range(MAX_DISTINCT_SEQMODES)), description='seqMode')
 add_plot_button = widgets.Button(description='add (xvar, yvar)')
