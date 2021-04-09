@@ -236,6 +236,10 @@ class PicomotorGUI(QMainWindow):
 #############################################################################
 
         self.picomotor = MSerial(PICOMOTOR_COMPORT)
+        self.blank_history_template = {}
+        for idx in range(1, 4):
+            self.blank_history_template[str(idx)] = {str(idx): OrderedDict()
+                                      for idx in range(0, 3)}
         aliases = self.picomotor.aliases.keys()
 
         self.setWindowTitle('Picomotor')
@@ -282,22 +286,24 @@ class PicomotorGUI(QMainWindow):
         #plot picomotor histories
         i = 0
         history = self.picomotor.history
-        axes = [self.sc.ax1, self.sc.ax2, self.sc.ax3]
+        axes = [self.canvas.ax1, self.canvas.ax2, self.canvas.ax3]
         for driver_key in history:
             ax = axes[i]
+            ax.cla()
             i += 1
             for motor_key in history[driver_key]:
                 x_data = list(history[driver_key][motor_key].keys())
                 y_data = np.cumsum(
                     list(history[driver_key][motor_key].values()))
                 label = get_key(
-                    self.picomotor.aliases.keys(), (int(driver_key), int(motor_key)))
+                    self.picomotor.aliases, (int(driver_key), int(motor_key)))
+                # label = (int(driver_key), int(motor_key))
                 ax.plot(x_data, y_data, marker='o',
                          linestyle='dashed', label=label)
                 ax.legend(loc='best')
                 ax.set_xlabel('time (TODO: formatting)')
                 ax.set_ylabel('position')
-        self.sc.draw()
+        self.canvas.draw()
 
     def set_active_motor(self):
         radioBtn = self.sender()
@@ -307,11 +313,14 @@ class PicomotorGUI(QMainWindow):
             print(self.active_motor + ' selected.')
 
     def clear_history(self):
-        axes = [self.sc.ax1, self.sc.ax2, self.sc.ax3]
+        axes = [self.canvas.ax1, self.canvas.ax2, self.canvas.ax3]
         for ax in axes:
             ax.cla()
-        self.sc.draw()
+        self.canvas.draw()
         self.picomotor.history = {}
+        for idx in range(1, 4):
+            self.picomotor.history[str(idx)] = {str(idx): OrderedDict()
+                                      for idx in range(0, 3)}
 
 
 
