@@ -236,10 +236,6 @@ class PicomotorGUI(QMainWindow):
 #############################################################################
 
         self.picomotor = MSerial(PICOMOTOR_COMPORT)
-        self.blank_history_template = {}
-        for idx in range(1, 4):
-            self.blank_history_template[str(idx)] = {str(idx): OrderedDict()
-                                      for idx in range(0, 3)}
         aliases = self.picomotor.aliases.keys()
 
         self.setWindowTitle('Picomotor')
