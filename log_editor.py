@@ -48,7 +48,6 @@ def save_image_log(event, qgrid_widget):
 #     print(payload)
     resp = bc._send_message('put', '/runs/' + str(run_id) + '/', data=payload)
 
-
 def load_image_log(watchfolder, optional_column_names=[]):
     try:
         existing_df = load_qgrid.loaded_qgrid.get_changed_df().dropna()
@@ -63,12 +62,10 @@ def load_image_log(watchfolder, optional_column_names=[]):
     df = get_newest_df(
         watchfolder, optional_column_names=optional_column_names, existing_df=existing_df)
     load_image_log.old_watchfolder = watchfolder
-    # for testing
-    # df = bc.get_runs_df_from_ids([219153, 219151],
-    #                              optional_column_names=optional_column_names)
     for column in optional_column_names:
         if column not in df.columns:
             df[column] = nan
+    df.index = range(len(df.index))
 
     col_opts = {'editable': False}
     col_defs = {}
