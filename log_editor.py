@@ -203,10 +203,24 @@ def clear_plot(button):
 
 clear_plot_button.on_click(clear_plot)
 
+lastshotBad_button = widgets.Button(description='yeet last shot')
+
+
+def mark_lastshotBad(button):
+    load_qgrid.loaded_qgrid.close()
+    load_qgrid(load_button)
+    df = load_qgrid.loaded_qgrid.get_changed_df()
+    bc.append_analysis_to_run(int(df['run_id'][0]), {'badshot': True})
+    load_qgrid.loaded_qgrid.close()
+    load_qgrid(load_button)
+
+
+lastshotBad_button.on_click(mark_lastshotBad)
+
 VBox_x = widgets.VBox([xvars_menu, xvars_display])
 VBox_y = widgets.VBox([yvars_menu, yvars_display])
 VBox_seq = widgets.VBox([seqMode_menu, seqMode_display])
-VBox_buttons = widgets.VBox([add_plot_button, clear_plot_button])
+VBox_buttons = widgets.VBox([add_plot_button, clear_plot_button, lastshotBad_button])
 live_plot_HBox = widgets.HBox(
     [VBox_x, VBox_y, VBox_seq, VBox_buttons])
 
