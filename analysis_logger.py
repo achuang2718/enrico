@@ -240,6 +240,8 @@ class AnalysisLogger():
         try:
             analysis_dict, self.previous_settings = analyze_image(
                 file)
+            if len(self.previous_settings) == 0:
+                self.previous_settings = None
             resp = bc.append_analysis_to_run(run_id, analysis_dict)
         except:  # if MATLAB analysis fails
             analysis_dict = {'badshot': True}
@@ -313,13 +315,6 @@ class AnalysisLogger():
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         analysis_logger = AnalysisLogger()
-    elif len(sys.argv) == 4:
-        analysis_mode, watchfolder, save_images = (sys.argv[1], sys.argv[2], ('True' == sys.argv[3])
-                                                   )
-        analysis_logger = AnalysisLogger(analysis_mode=analysis_mode,
-                                         watchfolder=watchfolder,
-                                         save_images=save_images)
-        print('analysis initialized')
     try:
         analysis_logger.main()
     except KeyboardInterrupt:
