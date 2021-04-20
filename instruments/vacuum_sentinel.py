@@ -17,7 +17,7 @@ K_INTERMEDIATE_ADDRESS = "COM10"
 MAIN_AND_NA_INTERMEDIATE_ADDRESS = "COM11"
 K_OVEN_ADDRESS = "COM12"
 
-NA_OVEN_THRESHOLD_PRESSURE = 1e-7
+NA_OVEN_THRESHOLD_PRESSURE = 1e-9
 K_OVEN_THRESHOLD_PRESSURE = 1e-5
 MAIN_THRESHOLD_PRESSURE = 1e-10
 NA_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-9
@@ -84,7 +84,7 @@ def main():
 				thresholds_string = ""
 				for threshold_tuple in thresholds_list:
 					reading_key, value, threshold = threshold_tuple 
-					thresholds_string = thresholds_string + reading_key + ", value = " + str(value), + ", threshold = " + str(threshold) + "; "
+					thresholds_string = thresholds_string + reading_key + ", value = " + str(value) + ", threshold = " + str(threshold) + "; "
 				if(threshold_count >= THRESHOLD_PATIENCE and not threshold_fault):
 					threshold_fault = True
 					threshold_warning_string = mention_string + "VACUUM_THRESHOLD_EXCEEDED: The following vacuum readings are above threshold: " + thresholds_string 
@@ -92,9 +92,10 @@ def main():
 					threshold_old_time = time.time() 
 				elif(threshold_fault):
 					threshold_current_time = time.time()
-						if(threshold_current_time - threshold_old_time > SLACK_THRESHOLD_REUPDATE_TIME_SECS):
-							threshold_old_time = threshold_current_time 
-							threshold_update_string = "VACUUM_THRESHOLD_UPDATE: The following values are still above threshold: " + thresholds_string
+					if(threshold_current_time - threshold_old_time > SLACK_THRESHOLD_REUPDATE_TIME_SECS):
+						threshold_old_time = threshold_current_time 
+						threshold_update_string = "VACUUM_THRESHOLD_UPDATE: The following values are still above threshold: " + thresholds_string
+						my_monitor.warn_on_slack(threshold_update_string)
 			elif(threshold_count > 0):
 				threshold_count -= 1
 				if(threshold_count < THRESHOLD_PATIENCE and threshold_fault):

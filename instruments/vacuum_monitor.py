@@ -1,5 +1,6 @@
 from status_monitor import StatusMonitor
 from ionpump import IonPump 
+import serial
 from iongauge import IonGauge
 import numpy as np 
 import time 
@@ -111,7 +112,7 @@ class VacuumMonitor(StatusMonitor):
                 threshold_list.extend(instrument_threshold_list)
                 for key in instrument_dict:
                     overall_dict[key] = instrument_dict[key]
-            except ValueError as e:
+            except (ValueError, serial.serialutil.SerialException) as e:
                 for key in instrument_read_keys:
                     overall_dict[key] = "ERROR"
                 error_list.append(instrument_name)
@@ -119,7 +120,7 @@ class VacuumMonitor(StatusMonitor):
             overall_dict["Time"] = time.strftime("%y-%m-%d %H:%M:%S")
         if(log_local):
             self.log_values_locally(overall_dict) 
-        return (overall_dict, error_list)
+        return (overall_dict, error_list, threshold_list)
 
     def _monitor_pump_helper(self, instrument, instrument_name, instrument_read_keys, warning_threshold_dict):
         return_dict = {}
@@ -130,7 +131,7 @@ class VacuumMonitor(StatusMonitor):
             if(not warning_threshold_dict is None) and (instrument_read_key in warning_threshold_dict):
                 threshold = warning_threshold_dict[instrument_read_key] 
                 if(read_value > threshold):
-                    threshold_list.append(overall_reading_key) 
+                    threshold_list.append((overall_reading_key, read_value, threshold)) 
             return_dict[overall_reading_key] = read_value
         return (return_dict, threshold_list)
 
@@ -173,8 +174,8 @@ class VacuumMonitor(StatusMonitor):
             time.sleep(ION_GAUGE_DELAY) 
             returned_value = instrument.measure_pressure()
             instrument.turn_off() 
-        if(instrument_value == -1):
-            raise ValueError("Unable to read from instrument: return string does not contain OK")
+        if(returned_value == -1):
+            raise ValueError("Unable to read from instrument.")
         return returned_value 
 
 
