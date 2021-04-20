@@ -1,6 +1,15 @@
 from vacuum_monitor import VacuumMonitor
 import time
 
+#Configure sampling rate, etc. 
+DELAY_TIME = 5
+SAMPLES_PER_LOG = 12
+ERROR_PATIENCE = 3
+THRESHOLD_PATIENCE = 3
+
+PRINT_VALUES = True
+
+#Configure addresses for vacuum monitors
 NA_OVEN_ADDRESS = "COM9"
 K_INTERMEDIATE_ADDRESS = "COM10"
 MAIN_AND_NA_INTERMEDIATE_ADDRESS = "COM11"
@@ -12,10 +21,16 @@ MAIN_THRESHOLD_PRESSURE = 1e-10
 NA_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-9
 K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-8
 
-DELAY_TIME = 5
-SAMPLES_PER_LOG = 12
+#Configure settings for who to warn in a vacuum emergency
+alex_chuang_id = "UCL98903C"
+yiqi_ni_id = "UATPBPT38"
+carsten_robens_id = "UATPCKZ2A"
+eric_wolf_id = "U01320WR8KE"
 
-PRINT_VALUES = True
+warning_id_list = [alex_chuang_id, yiqi_ni_id, carsten_robens_id, eric_wolf_id] 
+mention_string = ""
+for warning_id in warning_id_list:
+    mention_string = mention_string + "<@" + warning_id + ">"
 
 def main():
 	my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
