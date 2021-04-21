@@ -1,5 +1,6 @@
 from status_monitor import StatusMonitor
 from ionpump import IonPump 
+import serial
 from iongauge import IonGauge
 import numpy as np 
 import time 
@@ -35,9 +36,8 @@ class VacuumMonitor(StatusMonitor):
         keyword_dict: A dictionary of any keywords that should be passed to the instrument constructor. May be empty or none.
         
     """
-    def __init__(self, instrument_tuple_list, warning_interval_in_min = 10, local_log_filename = "DEFAULT.csv", can_slack_warn = True):
+    def __init__(self, instrument_tuple_list, warning_interval_in_min = 0, local_log_filename = "DEFAULT.csv"):
         super().__init__(warning_interval_in_min = warning_interval_in_min, local_log_filename = local_log_filename)
-        self.can_slack_warn = can_slack_warn
         self.instrument_list = [] 
         self.instrument_names_list = [] 
         self.instrument_warning_dicts_list = []
@@ -83,31 +83,57 @@ class VacuumMonitor(StatusMonitor):
 
     #TODO: Add support for uploading to breadboard
     #TODO: Add support for plotting
+    """Core method for monitoring.
+
+    Given the global parameters established in the init, monitors the instruments which have been passed to the vacuum_monitor instance.
+    Optionally logs the measured values locally in a pandas-formatted .csv using the method from status_monitor.
+
+    Parameters:
+
+    log_local: Whether to log the measured values of the vacuum readings locally in a .csv. Default true. 
+    add_time: Whether to append a timestamp to the dict of measured values. Default true. 
+
+    Returns:
+
+    A tuple (overall_dict, error_list, threshold_list)
+
+    overall_dict: A dict of the values returned from the various vacuum readings. 
+    error_list: A list of instrument names which have errors preventing the values from being read
+    threshold_list: A list of readings which are above the set threshold values
+    """
     def monitor_once(self, log_local = True, add_time = True):
         overall_dict = {}
+        error_list = []
+        threshold_list = [] 
         for instrument, instrument_name, instrument_read_keys, warning_threshold_dict in zip(self.instrument_list, self.instrument_names_list, 
                                                                                             self.instrument_read_keys_list, self.instrument_warning_dicts_list):
-            instrument_dict = self._monitor_pump_helper(instrument, instrument_name, instrument_read_keys, warning_threshold_dict)
-            for key in instrument_dict:
-                overall_dict[key] = instrument_dict[key]
+            try:
+                instrument_dict, instrument_threshold_list = self._monitor_pump_helper(instrument, instrument_name, instrument_read_keys, warning_threshold_dict)
+                threshold_list.extend(instrument_threshold_list)
+                for key in instrument_dict:
+                    overall_dict[key] = instrument_dict[key]
+            except (ValueError, serial.serialutil.SerialException) as e:
+                for key in instrument_read_keys:
+                    overall_dict[key] = "ERROR"
+                error_list.append(instrument_name)
         if(add_time):
             overall_dict["Time"] = time.strftime("%y-%m-%d %H:%M:%S")
         if(log_local):
             self.log_values_locally(overall_dict) 
-        return overall_dict
+        return (overall_dict, error_list, threshold_list)
 
     def _monitor_pump_helper(self, instrument, instrument_name, instrument_read_keys, warning_threshold_dict):
         return_dict = {}
+        threshold_list = []
         for instrument_read_key in instrument_read_keys:
+            overall_reading_key = instrument_name + " " + instrument_read_key
             read_value = self._read_helper(instrument, instrument_read_key)
             if(not warning_threshold_dict is None) and (instrument_read_key in warning_threshold_dict):
                 threshold = warning_threshold_dict[instrument_read_key] 
-                if(read_value > threshold and self.can_slack_warn):
-                    self.warn_on_slack("The measured value of " + instrument_read_key + " on " + instrument_name + " was " + str(read_value) + """, 
-                    larger than the threshold value of """ + str(threshold) + ".")
-            reading_key = instrument_name + " " + instrument_read_key
-            return_dict[reading_key] = read_value 
-        return return_dict 
+                if(read_value > threshold):
+                    threshold_list.append((overall_reading_key, read_value, threshold)) 
+            return_dict[overall_reading_key] = read_value
+        return (return_dict, threshold_list)
 
             
     def give_instrument_names(self):
@@ -148,6 +174,8 @@ class VacuumMonitor(StatusMonitor):
             time.sleep(ION_GAUGE_DELAY) 
             returned_value = instrument.measure_pressure()
             instrument.turn_off() 
+        if(returned_value == -1):
+            raise ValueError("Unable to read from instrument.")
         return returned_value 
 
 
