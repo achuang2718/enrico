@@ -61,7 +61,7 @@ def getYcamAnalysis(eng, filepath,
 
 
 dual_imaging_analyzed_var_names = ['K_NcntLarge', 'Na_NcntLarge', 'K_NcntSmall', 'Na_NcntSmall',
-                                   'Na_COMX', 'Na_COMY']
+                                   'Na_COMX', 'Na_COMY','K_squared_KGaussianWidthX','K_squared_KGaussianWidthY','K_squared_widthRatioYoverX']
 
 
 def getDualImagingAnalysis(eng, filepath,
