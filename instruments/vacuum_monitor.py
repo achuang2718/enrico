@@ -19,12 +19,13 @@ class VacuumMonitor(StatusMonitor):
         inst_port: str, The port name of the instrument
         inst_type: str, a string identifying the type of instrument
             'pump_spc' - A DIGITEL SPC ion pump controller
+            'pump_spce' - A DIGITEL SPCe ion pump controller
             'pump_mpc' - A DIGITEL MPC ion pump controller
             'gauge_xgs-600' - An Agilent XGS-600 ion gauge controller
         inst_read_key: A key identifying what values, if any, should be read from the instrument and logged.
-            'pressure': Supported for 'pump_spc'
-            'voltage': Supported for 'pump_spc'
-            'current': Supported for 'pump_spc'
+            'pressure': Supported for 'pump_spc', 'pump_spce'
+            'voltage': Supported for 'pump_spc', 'pump_spce'
+            'current': Supported for 'pump_spc', 'pump_spce'
             'pressure1': Supported for 'pump_mpc'.
             'pressure2': Supported for 'pump_mpc'
             'pressurefil1': Supported for 'gauge_xgs-600'
@@ -53,6 +54,8 @@ class VacuumMonitor(StatusMonitor):
             self.instrument_read_keys_list.append(inst_read_keys)
             if(inst_type == 'pump_spc'):
                 instrument = IonPump(inst_port, 'spc', **keyword_dict)
+            elif(inst_type == 'pump_spce'):
+                instrument = IonPump(inst_port, 'spce', **keyword_dict) 
             elif(inst_type == 'pump_mpc'):
                 instrument = IonPump(inst_port, 'mpc', **keyword_dict)
             elif(inst_type == 'gauge_xgs-600'):

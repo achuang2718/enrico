@@ -11,6 +11,7 @@ from parse import *
 DEFAULT_LOG_FILE_STRING = "Ion_Pump_Log" 
 MPC_DEFAULT_ADDRESS = 5
 SPC_DEFAULT_ADDRESS = 1
+SPCE_DEFAULT_ADDRESS = 5
 
 
 # def get_key(my_dict, val):
@@ -54,6 +55,8 @@ class IonPump:
                 self.address = MPC_DEFAULT_ADDRESS
             elif(pump_label == "spc"):
                 self.address = SPC_DEFAULT_ADDRESS
+            elif(pump_label == "spce"):
+                self.address = SPCE_DEFAULT_ADDRESS
         else:
             self.address = address
         
@@ -104,7 +107,7 @@ class IonPump:
     """
     def measure_current(self, supply_index = 1):
         CURRENT_MEASURE_CODE = '0A'
-        if(self.pump_label == "spc"):
+        if(self.pump_label == "spc" or self.pump_label == "spce"):
             data_field = ''
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
@@ -116,7 +119,7 @@ class IonPump:
     """Measures ion pump pressure."""
     def measure_pressure(self, supply_index = 1):
         PRESSURE_MEASURE_CODE = '0B'
-        if(self.pump_label == "spc"):
+        if(self.pump_label == "spc" or self.pump_label == "spce"):
             data_field = ''
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
@@ -128,7 +131,7 @@ class IonPump:
     """Measures ion pump voltage"""
     def measure_voltage(self, supply_index = 1):
         VOLTAGE_MEASURE_CODE = '0C'
-        if(self.pump_label == "spc"):
+        if(self.pump_label == "spc" or self.pump_label == "spce"):
             data_field = ''
         elif(self.pump_label == "mpc"):
             data_field = str(supply_index) + ' '
@@ -150,7 +153,7 @@ class IonPump:
             return False
         TURN_OFF_CODE = '38'
         try:
-            if(self.pump_label == "spc"):
+            if(self.pump_label == "spc" or self.pump_label == "spce"):
                 turn_off_command = self._make_command(TURN_OFF_CODE)
                 response_bytes = self.send_and_get_response(turn_off_command)
                 response_string = response_bytes.decode("ASCII")
@@ -185,7 +188,7 @@ class IonPump:
             return False
         TURN_ON_CODE = '37'
         try:
-            if(self.pump_label == "spc"):
+            if(self.pump_label == "spc" or self.pump_label == "spce"):
                 turn_on_command = self._make_command(TURN_ON_CODE)
                 response_bytes = self.send_and_get_response(turn_on_command)
                 response_string = response_bytes.decode("ASCII")
