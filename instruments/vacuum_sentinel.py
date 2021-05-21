@@ -28,7 +28,7 @@ NA_OVEN_THRESHOLD_PRESSURE = 1e-7
 K_OVEN_THRESHOLD_PRESSURE = 1e-5
 MAIN_THRESHOLD_PRESSURE = 1e-10
 NA_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-9
-K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-8
+K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-7
 
 #List of sentinel-monitored values to plot. Elements are keys of the dict returned by monitor_once
 PLOTTING_KEY_LIST = []
@@ -63,7 +63,7 @@ for warning_id in warning_id_list:
 def main():
 	my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
 								("K_OVEN_PUMP", K_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_OVEN_THRESHOLD_PRESSURE}, {}),
-								("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
+								("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
 								("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
 								local_log_filename = "Vacuum_Log.csv")
 	start_time = time.time()
