@@ -8,7 +8,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "/.."))
 from utility_functions import initialize_live_plot, update_live_plot
 
-#Configure sampling rate, etc. 
+#Configure sampling rate, etc.
 DELAY_TIME = 5
 SAMPLES_PER_LOG = 12
 ERROR_PATIENCE = 3
@@ -50,12 +50,13 @@ PLOT_TIMEUNIT = "m"
 
 
 #Configure settings for who to warn in a vacuum emergency
-alex_chuang_id = "UCL98903C"
-yiqi_ni_id = "UATPBPT38"
-carsten_robens_id = "UATPCKZ2A"
-eric_wolf_id = "U01320WR8KE"
+#new_ids after migrating to MIT enterprise
+alex_chuang_id = "W0107FQ8YSD"
+yiqi_ni_id = "W0107FPUUPK"
+carsten_robens_id = "W011MTT6X7F"
+eric_wolf_id = "W0135CETQEM"
 
-warning_id_list = [eric_wolf_id, alex_chuang_id, yiqi_ni_id, carsten_robens_id] 
+warning_id_list = [eric_wolf_id, alex_chuang_id, yiqi_ni_id, carsten_robens_id]
 mention_string = ""
 for warning_id in warning_id_list:
     mention_string = mention_string + "<@" + warning_id + ">"
