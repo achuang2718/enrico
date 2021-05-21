@@ -95,6 +95,15 @@ class IonGauge:
         pressure_bytes = self.send_and_get_response(read_cmd)
         return self.parse_pressure_bytes(pressure_bytes)
 
+
+    def toggle_and_measure_pressure(self, filament_index = 1, toggle_wait_time = 10.0):
+        self.turn_on(filament_index) 
+        time.sleep(toggle_wait_time)
+        pressure_value = self.measure_pressure()
+        self.turn_off(filament_index)
+        return pressure_value
+
+
     @staticmethod
     def parse_pressure_bytes(pressure_bytes):
         pressure_string = pressure_bytes.decode("ASCII")
