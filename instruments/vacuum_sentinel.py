@@ -1,7 +1,8 @@
 from vacuum_monitor import VacuumMonitor
 import time
+from collections import deque
 
-#Imports utility_functions.
+#Imports utility_functions. Update this once enrico is refactored into modules
 import sys 
 import os 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "/.."))
@@ -29,18 +30,21 @@ MAIN_THRESHOLD_PRESSURE = 1e-10
 NA_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-9
 K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-8
 
-# #List of sentinel-monitored values to plot. Elements are keys of the dict returned by monitor_once
-# PLOTTING_KEY_LIST = []
+#List of sentinel-monitored values to plot. Elements are keys of the dict returned by monitor_once
+PLOTTING_KEY_LIST = []
 
-# #parameters for live plotting
-# #Number of values to plot on one live plot. 
-# PLOTTING_NUMBER = -1
-# #Interval between plotted points (every Nth point is plotted)
-# PLOTTING_INTERVAL = 12
-# #Put the y scale of the plot in log
-# PLOT_YLOG = False 
-# #Put the x scale of the plot in log
-# PLOT_XLOG = False
+#parameters for live plotting
+#Number of values to plot on one live plot. 
+PLOTTING_NUMBER = -1
+#Interval between plotted points (every Nth point is plotted)
+PLOTTING_INTERVAL = 12
+#Put the y scale of the plot in log
+PLOT_YLOG = False 
+#Put the x scale of the plot in log
+PLOT_XLOG = False
+#Set the unit of time for the live plot
+#Accepts "s", "m", "h", "d"
+PLOT_TIMEUNIT = "m"
 
 
 
@@ -62,29 +66,32 @@ def main():
 								("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
 								("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
 								local_log_filename = "Vacuum_Log.csv")
-	# figure_and_axis_dict = {}
-	# for plotting_key in plotting_key_list:
-	# 	fig, ax = initialize_live_plot()
-	# 	ax.
-	old_time = time.time()
+	start_time = time.time()
+	old_time = start_time
 	counter = 0
 	error_count = 0
 	threshold_count = 0
 	local_logger_bool = True
+	plot_update_bool = True
 	threshold_fault = False 
 	error_fault = False 
 	error_old_time = 0.0 
 	threshold_old_time = 0.0
+	figure_and_axis_dict, data_deque_dict, time_deque = set_up_plots()
 	try:
 		while(True):
 			current_time = time.time()
 			if(current_time - old_time > DELAY_TIME or current_time - old_time < 0):
 				old_time = current_time 
 				local_logger_bool = (counter % SAMPLES_PER_LOG == 0) 
+				plot_update_bool = (counter % PLOTTING_INTERVAL == 0)
 				counter += 1
 				readings_dict, errors_list, thresholds_list = my_monitor.monitor_once(log_local = local_logger_bool)
 				if(PRINT_VALUES):
 					print(readings_dict) 
+				if(plot_update_bool):
+					elapsed_time = current_time - start_time
+					update_plots(figure_and_axis_dict, data_deque_dict, time_deque, elapsed_time, readings_dict)
 				error_count, error_fault, error_old_time = handle_errors(error_count, error_fault, error_old_time, errors_list, my_monitor)
 				threshold_count, threshold_fault, threshold_old_time = handle_thresholds(threshold_count, threshold_fault, threshold_old_time, thresholds_list, my_monitor)
 	except Exception as e:
@@ -142,6 +149,47 @@ def handle_thresholds(threshold_count, threshold_fault, threshold_old_time, thre
 			threshold_fault = False
 			my_monitor.warn_on_slack("VACUUM_THRESHOLD_RESOLVED: The outstanding threshold warning has been resolved. All vacuum values below threshold.") 
 	return (threshold_count, threshold_fault, threshold_old_time) 
+
+
+def set_up_plots():
+	figure_and_axis_dict = {} 
+	data_deque_dict = {}
+	for key in PLOTTING_KEY_LIST:
+		fig, ax = initialize_live_plot()
+		if(PLOT_XLOG):
+			ax.set_xscale("log")
+		if(PLOT_YLOG):
+			ax.set_yscale("log")
+		ax.set_xlabel("Time (" + PLOT_TIMEUNIT + ") since " + time.strftime("%y-%m-%d %H:%M:%S"))
+		ax.set_ylabel(key) 
+		figure_and_axis_dict[key] = (fig, ax)
+		if(PLOTTING_NUMBER == -1):
+			data_deque = deque([]) 
+		else:
+			data_deque = deque([], PLOTTING_NUMBER)
+		data_deque_dict[key] = data_deque
+		if(PLOTTING_NUMBER == -1):
+			time_deque = deque([]) 
+		else:
+			time_deque = deque([], PLOTTING_NUMBER)
+	return (figure_and_axis_dict, data_deque_dict, time_deque)
+
+def update_plots(figure_and_axis_dict, data_deque_dict, time_deque, elapsed_time, readings_dict):
+	if(PLOT_TIMEUNIT == "s"):
+		seconds_to_time_unit_conversion = 1.0 
+	elif(PLOT_TIMEUNIT == "m"):
+		seconds_to_time_unit_conversion = 1.0 / (60) 
+	elif(PLOT_TIMEUNIT == "h"):
+		seconds_to_time_unit_conversion = 1.0 / (60 * 60)
+	elif(PLOT_TIMEUNIT == "d"):
+		seconds_to_time_unit_conversion = 1.0 / (60 * 60 * 24) 
+	time_deque.append(elapsed_time / seconds_to_time_unit_conversion) 
+	for key in figure_and_axis_dict:
+		fig, ax = figure_and_axis_dict[key]
+		data_deque = data_deque_dict[key]
+		new_data_point = readings_dict[key] 
+		data_deque.append(new_data_point) 
+		update_live_plot(time_deque, data_deque, ax = ax) 
 
 if __name__ == "__main__":
 	main()
