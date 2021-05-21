@@ -154,6 +154,10 @@ def handle_thresholds(threshold_count, threshold_fault, threshold_old_time, thre
 def set_up_plots():
 	figure_and_axis_dict = {} 
 	data_deque_dict = {}
+	if(PLOTTING_NUMBER == -1):
+		time_deque = deque([]) 
+	else:
+		time_deque = deque([], PLOTTING_NUMBER)
 	for key in PLOTTING_KEY_LIST:
 		fig, ax = initialize_live_plot()
 		if(PLOT_XLOG):
@@ -168,10 +172,6 @@ def set_up_plots():
 		else:
 			data_deque = deque([], PLOTTING_NUMBER)
 		data_deque_dict[key] = data_deque
-		if(PLOTTING_NUMBER == -1):
-			time_deque = deque([]) 
-		else:
-			time_deque = deque([], PLOTTING_NUMBER)
 	return (figure_and_axis_dict, data_deque_dict, time_deque)
 
 def update_plots(figure_and_axis_dict, data_deque_dict, time_deque, elapsed_time, readings_dict):
@@ -183,7 +183,7 @@ def update_plots(figure_and_axis_dict, data_deque_dict, time_deque, elapsed_time
 		seconds_to_time_unit_conversion = 1.0 / (60 * 60)
 	elif(PLOT_TIMEUNIT == "d"):
 		seconds_to_time_unit_conversion = 1.0 / (60 * 60 * 24) 
-	time_deque.append(elapsed_time / seconds_to_time_unit_conversion) 
+	time_deque.append(elapsed_time * seconds_to_time_unit_conversion) 
 	for key in figure_and_axis_dict:
 		fig, ax = figure_and_axis_dict[key]
 		data_deque = data_deque_dict[key]
