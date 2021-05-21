@@ -22,14 +22,16 @@ class VacuumMonitor(StatusMonitor):
             'pump_spce' - A DIGITEL SPCe ion pump controller
             'pump_mpc' - A DIGITEL MPC ion pump controller
             'gauge_xgs-600' - An Agilent XGS-600 ion gauge controller
+            'gauge_xgs-600_toggle' - An agilent XGS-600 ion gauge controller which must be turned off and on
         inst_read_key: A key identifying what values, if any, should be read from the instrument and logged.
             'pressure': Supported for 'pump_spc', 'pump_spce'
             'voltage': Supported for 'pump_spc', 'pump_spce'
             'current': Supported for 'pump_spc', 'pump_spce'
             'pressure1': Supported for 'pump_mpc'.
             'pressure2': Supported for 'pump_mpc'
-            'pressurefil1': Supported for 'gauge_xgs-600'
-            'pressurefil2': Supported for 'gauge_xgs-600'
+            'pressurecurrentfil': Supported for 'gauge_xgs-600'. Measures the pressure on the currently active filament.
+            'pressurefil1toggle': Supported for 'gauge_xgs-600'. Toggles fil1 on, measures pressure, then turns it off
+            'pressurefil2toggle': Supported for 'gauge_xgs-600'. Ditto above with fil2.
             'voltage1', 'voltage2': Supported for 'pump_mpc' 
             'current1, current2': Supported for 'pump_mpc'
         warning_threshold_dict: A dictionary {read_key:Max Value} of combinations of keys and maximum allowed values before a warning is sent
@@ -58,7 +60,7 @@ class VacuumMonitor(StatusMonitor):
                 instrument = IonPump(inst_port, 'spce', **keyword_dict) 
             elif(inst_type == 'pump_mpc'):
                 instrument = IonPump(inst_port, 'mpc', **keyword_dict)
-            elif(inst_type == 'gauge_xgs-600'):
+            elif(inst_type == 'gauge_xgs-600' or inst_type == "gauge_xgs-600_toggle"):
                 instrument = IonGauge(inst_port, 'xgs-600', **keyword_dict) 
             else:
                 raise ValueError("inst_type " + inst_type + " is not supported by vacuum monitor.")
@@ -148,7 +150,6 @@ class VacuumMonitor(StatusMonitor):
     #TODO: Handle exceptions
     @staticmethod
     def _read_helper(instrument, instrument_read_key):
-        ION_GAUGE_DELAY = 10
         if(instrument_read_key == "pressure"):
             returned_value = instrument.measure_pressure() 
         elif(instrument_read_key == "pressure1"):
@@ -167,16 +168,12 @@ class VacuumMonitor(StatusMonitor):
             returned_value = instrument.measure_voltage(1) 
         elif(instrument_read_key == "voltage2"):
             returned_value = instrument.measure_voltage(2)
-        elif(instrument_read_key == "pressurefil1"):
-            instrument.turn_on(1)
-            time.sleep(ION_GAUGE_DELAY)
+        elif(instrument_read_key == "pressurecurrentfil"):
             returned_value = instrument.measure_pressure() 
-            instrument.turn_off() 
-        elif(instrument_read_key == "pressurefil2"):
-            instrument.turn_on(2) 
-            time.sleep(ION_GAUGE_DELAY) 
-            returned_value = instrument.measure_pressure()
-            instrument.turn_off() 
+        elif(instrument_read_key == "pressurefil1toggle"):
+            returned_value = instrument.toggle_and_measure_pressure(1)
+        elif(instrument_read_key == "pressurefil2toggle"):
+            returned_value = instrument.toggle_and_measure_pressure(2)
         if(returned_value == -1):
             raise ValueError("Unable to read from instrument.")
         return returned_value 
