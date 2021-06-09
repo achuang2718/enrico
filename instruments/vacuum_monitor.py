@@ -119,7 +119,8 @@ class VacuumMonitor(StatusMonitor):
                     overall_dict[key] = instrument_dict[key]
             except (ValueError, serial.serialutil.SerialException) as e:
                 for key in instrument_read_keys:
-                    overall_dict[key] = "ERROR"
+                    instrument_value_key = instrument_name + " " + key 
+                    overall_dict[instrument_value_key] = "ERROR"
                 error_list.append(instrument_name)
         if(add_time):
             overall_dict["Time"] = time.strftime("%y-%m-%d %H:%M:%S")
