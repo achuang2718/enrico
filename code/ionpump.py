@@ -6,7 +6,7 @@ import serial
 import os
 import time
 import datetime
-from parse import *
+import parse
 
 DEFAULT_LOG_FILE_STRING = "Ion_Pump_Log" 
 MPC_DEFAULT_ADDRESS = 5
@@ -248,12 +248,10 @@ class IonPump:
         current_string = current_bytes.decode("ASCII")
         status_code = current_string[3:5]
         if(status_code == "OK"):
-            #Search function imported from parse module
-            current_value_string = search('OK 00 {} ', current_string)[0]
+            current_value_string = parse.search('OK 00 {} ', current_string)[0]
             current_value = float(current_value_string)
             return current_value
         else:
-
             return -1
         
     @staticmethod
@@ -261,7 +259,7 @@ class IonPump:
         pressure_string = pressure_bytes.decode("ASCII")
         status_code = pressure_string[3:5]
         if(status_code == "OK"):
-            pressure_value_string = search('OK 00 {} ', pressure_string)[0]
+            pressure_value_string = parse.search('OK 00 {} ', pressure_string)[0]
             pressure_value = float(pressure_value_string) 
             return pressure_value
         else:
@@ -272,7 +270,7 @@ class IonPump:
         voltage_string = voltage_bytes.decode("ASCII")
         status_code = voltage_string[3:5]
         if(status_code == "OK"):
-            voltage_value_string = search('OK 00 {} ', voltage_string)[0]
+            voltage_value_string = parse.search('OK 00 {} ', voltage_string)[0]
             voltage_value = int(voltage_value_string)
             return voltage_value 
         else:

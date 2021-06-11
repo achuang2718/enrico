@@ -1,12 +1,18 @@
-from vacuum_monitor import VacuumMonitor
 import time
 from collections import deque
 
 #Imports utility_functions. Update this once enrico is refactored into modules
+
 import sys 
 import os 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "/.."))
-from utility_functions import initialize_live_plot, update_live_plot
+
+path_to_file = os.path.dirname(os.path.abspath(__file__))
+path_to_enrico = path_to_file + "/../../"
+
+sys.path.insert(0, path_to_enrico)
+
+from enrico.code.utility_functions import initialize_live_plot, update_live_plot
+from enrico.code.vacuum_monitor import VacuumMonitor
 
 #Configure sampling rate, etc. 
 DELAY_TIME = 5
