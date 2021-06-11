@@ -1,10 +1,13 @@
 import json
 import slack
-import os
+import importlib.resources as pkg_resources
 
-with open(os.path.join(os.path.dirname(__file__),'API_config_private/fermi1bot_config.json')) as json_file:
-    data = json.load(json_file)
-    token = data['token']
+from .. import configs as c 
+
+with pkg_resources.path(c, "fermi1bot_config.json") as json_config_path:
+    with open(json_config_path) as json_config_file:
+        data = json.load(json_config_file)
+        token = data['token']
 
 client = slack.WebClient(token=token)
 
