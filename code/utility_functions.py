@@ -140,16 +140,6 @@ def update_live_plot(x, y, fmt = '', ax = None, fancy = False, clear_previous = 
         ax.plot(x, y, fmt, **kwargs) 
     plt.draw()
     plt.pause(pause_length)
-    
-    
-
-    
-
-
-
-
-
-
 
 def load_breadboard_client():
     """Wraps the breadboard import process
@@ -167,28 +157,24 @@ def load_breadboard_client():
     """
 
     import json
-    import sys
-    import os
-    with open(os.path.join(os.path.dirname(__file__), "breadboard_path_config.json")) as my_file:
-        breadboard_dict = json.load(my_file)
-        breadboard_repo_path = breadboard_dict.get("breadboard_repo_path")
-        if(breadboard_repo_path is None):
-            raise KeyError(
-                "The .json config does not contain variable breadboard_repo_path")
-        breadboard_API_config_path = breadboard_dict.get(
-            "breadboard_API_config_path")
-        if(breadboard_API_config_path is None):
-            raise KeyError(
-                "The .json config does not contain variable breadboard_API_config_path")
-        sys.path.insert(0, breadboard_repo_path)
-        try:
-            from breadboard import BreadboardClient
-        except ModuleNotFoundError:
-            raise ValueError(
-                "Unable to import breadboard using specified value of breadboard_repo_path")
-        bc = BreadboardClient(breadboard_API_config_path)
+    import sys 
+    import importlib.resources as pkg_resources
+    from .. import configs as c
+    with pkg_resources.path(c, "breadboard_path_config.json") as breadboard_path_config_path, pkg_resources.path(c, "API_CONFIG_fermi1.json") as api_key_path:
+        with open(breadboard_path_config_path) as breadboard_path_config_file:
+            breadboard_dict = json.load(breadboard_path_config_file)
+            breadboard_repo_path = breadboard_dict.get("breadboard_repo_path")
+            if(breadboard_repo_path is None):
+                raise KeyError(
+                    "The .json config does not contain variable breadboard_repo_path")
+            sys.path.insert(0, breadboard_repo_path)
+            try:
+                from breadboard import BreadboardClient
+            except ModuleNotFoundError:
+                raise ValueError(
+                    "Unable to import breadboard using specified value of breadboard_repo_path")
+            bc = BreadboardClient(api_key_path)
     return bc
-
 
 def get_newest_run_dict(bc, max_retries=10):
     """Gets newest run dictionary containing runtime, run_id, and parameters via breadboard client bc
