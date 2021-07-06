@@ -25,19 +25,19 @@ MAIN_AND_NA_INTERMEDIATE_ADDRESS = "COM11"
 K_OVEN_ADDRESS = "COM12"
 
 NA_OVEN_THRESHOLD_PRESSURE = 1e-7
-K_OVEN_THRESHOLD_PRESSURE = 1e-5
+K_OVEN_THRESHOLD_PRESSURE = 1e-6
 MAIN_THRESHOLD_PRESSURE = 1e-10
-NA_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-9
+NA_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-8
 K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-7
 
 #List of sentinel-monitored values to plot. Elements are keys of the dict returned by monitor_once
 PLOTTING_KEY_LIST = []
 
 #parameters for live plotting
-#Number of values to plot on one live plot. 
+#Number of values to plot on one live plot. -1 indicates that an infinite number will be plotted
 PLOTTING_NUMBER = -1
 #Interval between plotted points (every Nth point is plotted)
-PLOTTING_INTERVAL = 12
+PLOTTING_INTERVAL = 1
 #Put the y scale of the plot in log
 PLOT_YLOG = False 
 #Put the x scale of the plot in log
@@ -62,11 +62,22 @@ for warning_id in warning_id_list:
     mention_string = mention_string + "<@" + warning_id + ">"
 
 def main():
+	#my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
+	#							("K_OVEN_PUMP", K_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_OVEN_THRESHOLD_PRESSURE}, {}),
+	#							("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
+	#							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
+	#							local_log_filename = "Vacuum_Log.csv")
+	#my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
+	# 							("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
+	# 							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
+	# 							local_log_filename = "Vacuum_Log.csv")
 	my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
-								("K_OVEN_PUMP", K_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_OVEN_THRESHOLD_PRESSURE}, {}),
-								("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
-								("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
-								local_log_filename = "Vacuum_Log.csv")
+								("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure2'], {"pressure2": NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
+	 							local_log_filename = "Vacuum_Log.csv")
+	# my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
+	# 							("K_OVEN_PUMP", K_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_OVEN_THRESHOLD_PRESSURE}, {}),
+	# 							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
+	# 							local_log_filename = "Vacuum_Log.csv")
 	start_time = time.time()
 	old_time = start_time
 	counter = 0
@@ -82,6 +93,7 @@ def main():
 	try:
 		while(True):
 			current_time = time.time()
+			refresh_plots(figure_and_axis_dict)
 			if(current_time - old_time > DELAY_TIME or current_time - old_time < 0):
 				old_time = current_time 
 				local_logger_bool = (counter % SAMPLES_PER_LOG == 0) 
@@ -191,6 +203,12 @@ def update_plots(figure_and_axis_dict, data_deque_dict, time_deque, elapsed_time
 		new_data_point = readings_dict[key] 
 		data_deque.append(new_data_point) 
 		update_live_plot(time_deque, data_deque, ax = ax) 
+
+def refresh_plots(figure_and_axis_dict):
+	for key in figure_and_axis_dict:
+		fig, _ = figure_and_axis_dict[key]
+		fig.canvas.draw_idle()
+		fig.canvas.flush_events()
 
 if __name__ == "__main__":
 	main()
