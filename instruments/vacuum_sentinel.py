@@ -11,6 +11,7 @@ from utility_functions import initialize_live_plot, update_live_plot
 #Configure sampling rate, etc.
 DELAY_TIME = 5
 SAMPLES_PER_LOG = 12
+RELOAD_LOG_DF = True
 ERROR_PATIENCE = 3
 THRESHOLD_PATIENCE = 3
 SLACK_ERROR_REUPDATE_TIME_SECS = 1800
@@ -27,8 +28,8 @@ K_OVEN_ADDRESS = "COM12"
 NA_OVEN_THRESHOLD_PRESSURE = 1e-7
 K_OVEN_THRESHOLD_PRESSURE = 1e-6
 MAIN_THRESHOLD_PRESSURE = 1e-10
-NA_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-8
-K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-7
+NA_INTERMEDIATE_THRESHOLD_PRESSURE = 5e-8
+K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-5
 
 #List of sentinel-monitored values to plot. Elements are keys of the dict returned by monitor_once
 PLOTTING_KEY_LIST = []
@@ -71,7 +72,13 @@ def main():
 	# 							("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
 	# 							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
 	# 							local_log_filename = "Vacuum_Log.csv")
+	# my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
+	# 							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure2'], {"pressure2": NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
+	# 							local_log_filename = "Vacuum_Log.csv")
+	# my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {})],
+	# 							local_log_filename = "Vacuum_Log.csv")
 	my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
+								("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
 								("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure2'], {"pressure2": NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
 	 							local_log_filename = "Vacuum_Log.csv")
 	# my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
@@ -99,7 +106,7 @@ def main():
 				local_logger_bool = (counter % SAMPLES_PER_LOG == 0) 
 				plot_update_bool = (counter % PLOTTING_INTERVAL == 0)
 				counter += 1
-				readings_dict, errors_list, thresholds_list = my_monitor.monitor_once(log_local = local_logger_bool)
+				readings_dict, errors_list, thresholds_list = my_monitor.monitor_once(log_local = local_logger_bool, log_reload = RELOAD_LOG_DF	)
 				if(PRINT_VALUES):
 					print(readings_dict) 
 				if(plot_update_bool):

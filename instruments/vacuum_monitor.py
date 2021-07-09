@@ -106,7 +106,7 @@ class VacuumMonitor(StatusMonitor):
     error_list: A list of instrument names which have errors preventing the values from being read
     threshold_list: A list of readings which are above the set threshold values
     """
-    def monitor_once(self, log_local = True, add_time = True):
+    def monitor_once(self, log_local = True, add_time = True, log_reload = False, log_overwrite = False):
         overall_dict = {}
         error_list = []
         threshold_list = [] 
@@ -125,7 +125,7 @@ class VacuumMonitor(StatusMonitor):
         if(add_time):
             overall_dict["Time"] = time.strftime("%y-%m-%d %H:%M:%S")
         if(log_local):
-            self.log_values_locally(overall_dict) 
+            self.log_values_locally(overall_dict, overwrite = log_overwrite, reload_df = log_reload) 
         return (overall_dict, error_list, threshold_list)
 
     def _monitor_pump_helper(self, instrument, instrument_name, instrument_read_keys, warning_threshold_dict):
