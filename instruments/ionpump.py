@@ -8,7 +8,6 @@ import time
 import datetime
 from parse import *
 
-DEFAULT_LOG_FILE_STRING = "Ion_Pump_Log" 
 MPC_DEFAULT_ADDRESS = 5
 SPC_DEFAULT_ADDRESS = 1
 SPCE_DEFAULT_ADDRESS = 5
@@ -33,10 +32,6 @@ class IonPump:
         wait_time: float, the wait time for a read after a send command
         sendwidget: Widget; ignore unless making a gui
         recvwidget: Widget; ignore unless making a gui
-        history_file_string: A string path to a history file which the ion pump should log into. If not specified, a default name is chosen
-        and an empty file created
-        log_history: bool, whether the ion pump should log its readings.
-        overwrite_history: bool, whether the ion pump should overwrite the specified history file
         can_control: bool, whether the class is allowed to make changes to the pump (i.e. turn on and off) or only to read
     """
     def __init__(self, COM_PORT, pump_label, address = None, echo = False, wait_time = 0.1, sendwidget = None, recvwidget = None,
