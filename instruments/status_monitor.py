@@ -9,7 +9,15 @@ from utility_functions import load_breadboard_client, get_newest_run_dict, time_
 import enrico_bot
 import numpy as np
 # TODO: logging errors
+alex_chuang_id = "W0107FQ8YSD"
+yiqi_ni_id = "W0107FPUUPK"
+carsten_robens_id = "W011MTT6X7F"
+eric_wolf_id = "W0135CETQEM"
 
+warning_id_list = [eric_wolf_id, alex_chuang_id, yiqi_ni_id, carsten_robens_id]
+mention_string = ""
+for warning_id in warning_id_list:
+    mention_string = mention_string + "<@" + warning_id + ">"
 
 class StatusMonitor:
     def __init__(self, backlog_max=30, warning_interval_in_min=10, read_run_time_offset=3, max_time_diff_tolerance=15, local_log_filename = "DEFAULT.csv"):
@@ -96,9 +104,11 @@ class StatusMonitor:
 
 
 
-    def warn_on_slack(self, warning_message):
+    def warn_on_slack(self, warning_message, annoying = False):
         print(warning_message)
         now = datetime.datetime.now()
+        if annoying:
+            warning_message = mention_string + warning_message
         if (self.last_warning is None or
                 (now - self.last_warning).seconds / 60 > self.warning_interval_in_min):
             enrico_bot.post_message(warning_message)
