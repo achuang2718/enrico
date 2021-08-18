@@ -109,7 +109,7 @@ refresh_button.on_click(refresh_qgrid)
 
 def export_qgrid(b):
     df = load_qgrid.loaded_qgrid.get_changed_df()
-    df.to_csv(os.path.join(os.path.dirname(filechooser_widget.selected_path),
+    df.to_csv(os.path.join(filechooser_widget.selected_path,
                            os.path.basename(filechooser_widget.selected_path) + '_params.csv'))
 
 

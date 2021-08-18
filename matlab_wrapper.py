@@ -60,7 +60,7 @@ def getYcamAnalysis(eng, filepath,
         print('matlab wrapper error')
 
 
-dual_imaging_analyzed_var_names = ['K_NcntLarge', 'Na_NcntLarge', 'K_NcntSmall', 'Na_NcntSmall','Na_TFy','Na_TFx',
+dual_imaging_analyzed_var_names = ['K_NcntLarge', 'Na_NcntLarge', 'K_NcntSmall', 'K_COMX', 'K_COMY', 'Na_NcntSmall','Na_TFy','Na_TFx',
                                    'Na_COMX', 'Na_COMY','K_squared_KGaussianWidthX','K_squared_KGaussianWidthY','K_squared_widthRatioYoverX','K_KcountsPerArea']
 
 
