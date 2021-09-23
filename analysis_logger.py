@@ -142,6 +142,11 @@ def main(analysis_type, watchfolder, load_matlab=True, images_per_shot=1, save_i
                 if images_per_shot == 1:
                     file = '{run_id}_0.spe'.format(run_id=run_id)
                 else:  # for triple imaging
+                    if (len(filesSPE) % 3) != 0:
+                        if len(unanalyzed_ids) > 1:
+                            run_id = unanalyzed_ids[-2]
+                        else:
+                            continue
                     file = ['{run_id}_{idx}.spe'.format(
                         run_id=run_id, idx=idx) for idx in range(images_per_shot)]
                 if append_mode:
@@ -191,7 +196,6 @@ def main(analysis_type, watchfolder, load_matlab=True, images_per_shot=1, save_i
 
 if __name__ == '__main__':
     from utility_functions import load_analysis_path
-
     # try/except block is a stopgap to keep things running smoothly even without analysis_config.json
     try:
         analysis_paths = load_analysis_path()
@@ -213,7 +217,11 @@ if __name__ == '__main__':
     print('existing runs: ')
     measurement_names = todays_measurements(basepath=data_basepath)
     if len(measurement_names) == 0:
-        raise ValueError('No measurements yet today.')
+        measurement_names = todays_measurements(basepath=data_basepath, yesterday=True)
+        yesterday = True
+    else:
+        yesterday = False
+        # raise ValueError('No measurements yet today.')        
     for name in sorted(measurement_names):
         if 'run' in name:
             if 'misplaced' not in name and '.csv' not in name:
@@ -221,8 +229,8 @@ if __name__ == '__main__':
                 last_output = name
     watchfolder = measurement_directory(
         measurement_name=suggest_run_name(
-            newrun_input='n', appendrun_input='y', basepath=data_basepath),
-        basepath=data_basepath)
+            newrun_input='n', appendrun_input='y', basepath=data_basepath, yesterday=yesterday),
+        basepath=data_basepath, yesterday=yesterday)
     save_images = True
     save_images_input = input('Keep images after analysis? [y/n]: '
                               )

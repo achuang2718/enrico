@@ -6,11 +6,15 @@ import parse
 MONTH_DIR_FMT = '%Y%m'
 
 
-def todays_measurements(basepath=''):
+def todays_measurements(basepath='', yesterday=False):
     """returns list of run_folders in basepath/month/date folder. By default, 
     basepath is the cwd.
     """
-    today = datetime.datetime.today()
+    if yesterday:
+        print('yesterday!')
+        today = datetime.datetime.today() - datetime.timedelta(days=1)
+    else:
+        today = datetime.datetime.today()
     month = datetime.datetime.strftime(today, MONTH_DIR_FMT)
     date = datetime.datetime.strftime(today, '%y%m%d')
     month_dir = os.path.join(basepath, month)
@@ -30,8 +34,9 @@ def todays_measurements(basepath=''):
     return run_folders
 
 
-def suggest_run_name(newrun_input=None, appendrun_input=None, basepath=''):
-    run_folders = todays_measurements(basepath=basepath)
+def suggest_run_name(newrun_input=None, appendrun_input=None, basepath='', yesterday=False):
+    run_folders = todays_measurements(basepath=basepath, yesterday=yesterday)
+    print(run_folders)
     runs = {}
     for directory in run_folders:
         result = parse.parse('run{}_{}', directory)
@@ -62,10 +67,14 @@ def suggest_run_name(newrun_input=None, appendrun_input=None, basepath=''):
     return measurement_name
 
 
-def measurement_directory(warn=False, measurement_name=None, basepath=''):
+def measurement_directory(warn=False, measurement_name=None, basepath='', yesterday=False):
     if measurement_name is None:
         measurement_name = suggest_run_name()
-    today = datetime.datetime.today()
+    if yesterday:
+        print('yesterday!')
+        today = datetime.datetime.today() - datetime.timedelta(days=1)
+    else:
+        today = datetime.datetime.today()
     month = datetime.datetime.strftime(today, MONTH_DIR_FMT)
     date = datetime.datetime.strftime(today, '%y%m%d')
     month_dir = os.path.join(basepath, month)
@@ -77,7 +86,6 @@ def measurement_directory(warn=False, measurement_name=None, basepath=''):
     ready = False
     while not ready:
         measurement_dir = os.path.join(month_date_dir, measurement_name)
-        # breakpoint()
         if not os.path.exists(measurement_dir):
             os.mkdir(measurement_dir)
             ready = True
