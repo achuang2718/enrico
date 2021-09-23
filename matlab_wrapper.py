@@ -99,16 +99,19 @@ def getDualImagingAnalysis(eng, filepath,
             print('MATLAB analysis finished but python wrapper failed.')
 
 
-triple_imaging_analyzed_var_names = ['K1_bareNcntAverageMarqueeBoxValues', 'K2_bareNcntAverageMarqueeBoxValues', 'Na_bareNcntAverageMarqueeBoxValues',
-                                     'Na_COMX', 'Na_COMY']
-
+#triple_imaging_analyzed_var_names = ['K1_bareNcntAverageMarqueeBoxValues', 'K2_bareNcntAverageMarqueeBoxValues', 'Na_bareNcntAverageMarqueeBoxValues',
+#                                     'Na_COMX', 'Na_COMY']
+triple_imaging_analyzed_var_names = ['K1_NcntLarge', 'K1_NcntSmall', 'K1_COMX', 'K1_COMY','K1_squared_KGaussianWidthX','K1_squared_KGaussianWidthY','K1_squared_widthRatioYoverX','K1_KcountsPerArea', 
+                                    'K2_NcntLarge', 'K2_NcntSmall', 'K2_COMX', 'K2_COMY','K2_squared_KGaussianWidthX','K2_squared_KGaussianWidthY','K2_squared_widthRatioYoverX','K2_KcountsPerArea', 
+                                    'K1_transferSmall','K1_transferLarge','K2_transferSmall','K2_transferLarge',
+                                   'Na_NcntSmall','Na_TFy','Na_TFx','Na_COMX', 'Na_COMY', 'Na_NcntLarge']
 
 def getTripleImagingAnalysis(eng, filepaths,
                              analysis_library_path=tripleimaging_path,
                              marqueeBox=None, normBox=None, save_jpg_preview=True):
     try:
         eng.eval(r'cd ' + analysis_library_path, nargout=0)
-        matlab_dict = eng.getTripleImagingZcamAnalysis(filepaths[0],
+        matlab_dict = eng.getTripleImagingZcamAnalysis_2021(filepaths[0],
                                                        filepaths[1], filepaths[2])
         # if marqueeBox is None and normBox is None:
         #     matlab_dict = eng.getMeasNaAnalysis(filepath) #calling MATLAB function getMeasNaAnalysis
