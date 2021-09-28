@@ -6,7 +6,10 @@ from status_monitor import StatusMonitor
 import sys
 
 TEMPERATURE_THRESHOLD = 50
-my_monitor = StatusMonitor()
+LOCAL_LOGGING = False
+REFERSH_TIME = 10 #seconds
+STRIKE_THRESHOLD = 5
+my_monitor = StatusMonitor(load_bc=False, local_log_filename='temperatureLogger.csv')
 logging.basicConfig(level=logging.DEBUG)
 
 def initialize_daq(serial_number_str, labels, thermocouple_type_list=None):
@@ -45,18 +48,34 @@ daq_2.start()
 while not all([port.value for port in port_lookup.values()]):
     sleep(0.1)
 
+strikes = 0
+port_overheated = False
 while True:
+    temperature_dict = {}
     try:
         print(datetime.datetime.now())
         for port in port_lookup.keys():
             port_temperature = port_lookup[port].value
             print([port, port_temperature])
+            temperature_dict.update({port: port_temperature})
             if port_temperature > TEMPERATURE_THRESHOLD:
-                my_monitor.warn_on_slack('WARNING: ' + str(port) + ' overheating. Current temperature ' +
-                    "{:10.1f} deg C".format(port_temperature), annoying=True)
+                port_overheated = True
+                if strikes > STRIKE_THRESHOLD:
+                    my_monitor.warn_on_slack('WARNING: ' + str(port) + ' overheating. Current temperature ' +
+                        "{:10.1f} deg C".format(port_temperature), annoying=True)
+        if port_overheated:
+            strikes += 1
+            print('strikes: ', strikes)
+        else:
+            strikes = 0
+            print('strikes reset back to 0.')
+        port_overheated = False
+        if LOCAL_LOGGING:
+            my_monitor.log_values_locally(temperature_dict)
     except:
         error_msg = str('Error: {}. {}, line: {}'.format(
                     sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2].tb_lineno))
-        my_monitor.warn_on_slack('Temperature monitor software error: ' + error_msg)
-    sleep(2)
-
+        print(error_msg)
+#         my_monitor.warn_on_slack('Temperature monitor software error: ' + error_msg)
+    sleep(REFRESH_TIME)
+# 

@@ -20,8 +20,12 @@ for warning_id in warning_id_list:
     mention_string = mention_string + "<@" + warning_id + ">"
 
 class StatusMonitor:
-    def __init__(self, backlog_max=30, warning_interval_in_min=10, read_run_time_offset=3, max_time_diff_tolerance=15, local_log_filename = "DEFAULT.csv"):
-        self.bc = load_breadboard_client()
+    def __init__(self, backlog_max=30, warning_interval_in_min=10, read_run_time_offset=3, max_time_diff_tolerance=15, local_log_filename = "DEFAULT.csv",
+                 load_bc = True):
+        if load_bc:
+            self.bc = load_breadboard_client()
+        else:
+            self.bc = None
         self.backlog_max = backlog_max
         self.backlog = OrderedDict()
         self.last_warning = None
