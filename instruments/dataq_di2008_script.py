@@ -76,6 +76,6 @@ while True:
         error_msg = str('Error: {}. {}, line: {}'.format(
                     sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2].tb_lineno))
         print(error_msg)
-#         my_monitor.warn_on_slack('Temperature monitor software error: ' + error_msg)
+        my_monitor.warn_on_slack('Temperature monitor software error: ' + error_msg)
     sleep(REFRESH_TIME)
 # 
