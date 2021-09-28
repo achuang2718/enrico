@@ -19,19 +19,15 @@ def initialize_daq(serial_number_str, labels, thermocouple_type_list=None):
     return daq, port_lookup
 
 #Initialize DAQs and define settings
-# sn_1 = '612E65DD'
-# labels_1 = ['bottom1',
-#         'bottom2',
-#         'top1',
-#         'KSlower1',
-#         'KSlower2',
-#         'LiSlower',
-#         'NaSlower',
-#         'bottomBucket']
-# daq_1, port_lookup = initialize_daq(sn_1, labels_1)
-port_lookup = {}
-
-
+sn_1 = '612E65DD'
+labels_1 = ['bottom1',
+        'bottom2',
+        'top1',
+        'KSlower1',
+        'KSlower2',
+        'LiSlower',
+        'NaSlower',
+        'bottomBucket']
 sn_2 = '6124F2DB'
 labels_2 = ['pump',
     'feshbachCoil',
@@ -39,9 +35,10 @@ labels_2 = ['pump',
     'top3',
     'ByGradient']
 thermocouple_type_list = ['j', 'j', 'j', 'j', 'k']
+daq_1, port_lookup = initialize_daq(sn_1, labels_1)
 daq_2, port_lookup2 = initialize_daq(sn_2, labels_2, thermocouple_type_list=thermocouple_type_list)
 port_lookup.update(port_lookup2)
-# daq_1.start()
+daq_1.start()
 daq_2.start()
 
 # wait for values to to start coming in
@@ -60,6 +57,6 @@ while True:
     except:
         error_msg = str('Error: {}. {}, line: {}'.format(
                     sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2].tb_lineno))
-        # my_monitor.warn_on_slack('Temperature monitor software error: ' + error_msg)
+        my_monitor.warn_on_slack('Temperature monitor software error: ' + error_msg)
     sleep(2)
 
