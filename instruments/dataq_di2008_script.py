@@ -7,7 +7,7 @@ import sys
 
 TEMPERATURE_THRESHOLD = 50
 LOCAL_LOGGING = False
-REFERSH_TIME = 10 #seconds
+REFRESH_TIME = 10 #seconds
 STRIKE_THRESHOLD = 5
 my_monitor = StatusMonitor(load_bc=False, local_log_filename='temperatureLogger.csv')
 logging.basicConfig(level=logging.DEBUG)
