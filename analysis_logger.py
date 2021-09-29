@@ -266,6 +266,7 @@ if __name__ == '__main__':
                                                                                                                       sys.exc_info()[
             1],
             sys.exc_info()[2].tb_lineno)
+        logger.debug(warning_message)
         # enrico_bot.post_message(warning_message)
 
         print(warning_message)
