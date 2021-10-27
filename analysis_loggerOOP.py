@@ -8,6 +8,7 @@ from math import isnan
 import sys
 import pickle
 from measurement_directory import run_ids_from_filenames
+from json import JSONDecodeError
 
 
 class AnalysisLogger():
@@ -18,7 +19,7 @@ class AnalysisLogger():
 
     def __init__(self, analysis_mode=None, watchfolder=None, load_matlab=True,
                  save_images=None, refresh_time=0.2, save_previous_settings=True,
-                 append_mode=True):
+                 append_mode=True, export_time = 10):
         """
         Args:
             - analysis_mode: determines which MATLAB function to perform analysis with.
@@ -57,6 +58,8 @@ class AnalysisLogger():
             if save_images_input == 'n':
                 print('entering testing mode...')
                 save_images = False
+            else:
+                save_images = True
         print("\n\n Watching this folder for changes: " +
               self.watchfolder + "\n\n")
         self.init_logger()
@@ -72,6 +75,7 @@ class AnalysisLogger():
         # check breadboard if analysis has already been done on image, e.g. if analysis is restarted
         self.append_mode = append_mode
         self.save_previous_settings = save_previous_settings
+        self.export_time = export_time
 
     def init_logger(self):
         import logging
@@ -163,9 +167,11 @@ class AnalysisLogger():
             if previous_settings is None:
                 matlab_dict = self.matlab_func_name(self.eng, filepath)
             else:
-                matlab_dict = self.matlab_func_name(self.eng, filepath, marqueeBox=previous_settings['marqueeBox'],
-                                                    normBox=previous_settings['normBox'])
+                matlab_dict = self.matlab_func_name(self.eng, filepath, marqueeBox=self.previous_settings['marqueeBox'],
+                                                    normBox=self.previous_settings['normBox'])
             analysis_dict, settings = matlab_dict['analysis'], matlab_dict['settings']
+            if settings == {}:
+                settings = None
             if not self.save_previous_settings:
                 settings = None
             return analysis_dict, settings
@@ -190,14 +196,12 @@ class AnalysisLogger():
             fresh_ids = sorted(list(set(run_ids).difference(
                 set(self.done_ids)).difference(set(self.unanalyzed_ids))))
             self.unanalyzed_ids += fresh_ids
-        pass
 
     def analyze_newest_images(self):
         """
         Analyzes the newest run_id on the stack of unanalyzed_ids and uploads to breadboard. 
         Deletes images locally after analysis if self.save_images is False.
         """
-
         def analyze_image(filepath):
             """Helper function for cleaning analysis_dict to JSON serializable types
             before uploading to breadboard.
@@ -223,8 +227,11 @@ class AnalysisLogger():
             pending_file = file
         else:  # for triple imaging
             file = [os.path.join(watchfolder, '{run_id}_{idx}.spe'.format(
-                run_id=run_id, idx=idx)) for idx in range(images_per_shot)]
+                run_id=run_id, idx=idx)) for idx in range(self.images_per_shot)]
             pending_file = file[-1]
+            while not os.path.exists(pending_file):
+                print(pending_file + ' not finished writing to disk. Waiting ...')
+                time.sleep(1)
         old_filesize = 0
         # wait for file to finish writing to hard disk before opening in MATLAB
         while os.path.getsize(pending_file) != old_filesize:
@@ -248,6 +255,7 @@ class AnalysisLogger():
             resp = bc.append_analysis_to_run(run_id, analysis_dict)
             warnings.warn(warning_message)
             self.logger.warn(warning_message)
+        
         popped_id = [self.unanalyzed_ids.pop()]
         self.done_ids += popped_id
 
@@ -265,7 +273,7 @@ class AnalysisLogger():
                 for f in file:
                     filepath = os.path.join(self.watchfolder, f)
                     os.remove(filepath)
-                    logger.debug(
+                    self.logger.debug(
                         'save_images is False, file {file} deleted after analysis.'.format(file=filepath))
             with open(os.path.join(self.watchfolder, 'run_ids.txt'), 'a') as run_ids_file:
                 run_ids_file.write(str(popped_id[0]) + '\n')
@@ -277,14 +285,6 @@ class AnalysisLogger():
         with open(os.path.join(self.watchfolder, 'analysisLogger.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
-    def main(self):
-        while True:
-            self.monitor_watchfolder()
-            if len(self.unanalyzed_ids) > 0:
-                self.analyze_newest_images()
-                # self.dump()
-            time.sleep(self.refresh_time)
-
     def export_params_csv(self):
         """
         Exports a csv file containing run_ids and Cicero list-bound variables and preliminary analysis to the BEC1server and the local MMYYDD folder.
@@ -294,12 +294,35 @@ class AnalysisLogger():
         bec1server_path = load_bec1serverpath()
         print('exporting csv... do not close window or interrupt with Ctrl-C!\n')
         df = get_newest_df(watchfolder)
+        print('exporting to: ' + os.path.join(watchfolder,
+                               os.path.basename(watchfolder) + '_params.csv'))
         df.to_csv(os.path.join(watchfolder,
                                os.path.basename(watchfolder) + '_params.csv'))
+        watchfolder = os.path.relpath(watchfolder, os.getcwd())
         server_exportpath = os.path.join(os.path.join(bec1server_path, watchfolder),
                                          os.path.basename(watchfolder) + '_params.csv')
+        print('exporting to: ' + server_exportpath)
         df.to_csv(server_exportpath)
-        print('done. exiting')
+        print('Export completed.')
+
+
+    def main(self):
+        export_idx = 0
+        export_threshold_int = int(self.export_time * 60 / self.refresh_time)
+        while True:
+            export_idx += 1
+            self.monitor_watchfolder()
+            if len(self.unanalyzed_ids) > 0:
+                try:
+                    self.analyze_newest_images()
+                except JSONDecodeError:
+                    print('JSONDecodeError encountered. Trying again later.')
+                # self.dump()
+            time.sleep(self.refresh_time)
+            if export_idx % export_threshold_int == 0:
+                self.export_params_csv()
+
+    
 
     def crash_messsage(self):
         warning_message = '{folder} analysis crashed: '.format(folder=watchfolder) + 'Error: {}. {}, line: {}'.format(sys.exc_info()[0],
