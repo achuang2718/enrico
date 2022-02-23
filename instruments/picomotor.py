@@ -222,7 +222,7 @@ class MplCanvas(FigureCanvasQTAgg):
         super(MplCanvas, self).__init__(fig)
 
 class PicomotorGUI(QMainWindow):
-    def __init__(self, PICOMOTOR_COMPORT='COM4'):
+    def __init__(self, PICOMOTOR_COMPORT='COM7'):
         super().__init__()
 
 ################DELETE AFTER GUI TESTING#####################################
