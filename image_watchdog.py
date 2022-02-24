@@ -36,7 +36,6 @@ class ImageWatchdog():
         self.backup_to_bec1server = backup_to_bec1server
         if self.backup_to_bec1server:
             self.set_bec1serverpath()
-        self.previous_update_time = datetime.datetime.now()
         self.incomingfile_time = datetime.datetime.now()
         self.newest_run_dict = {'run_id': 0}
         self.max_time_diff_in_sec = max_time_diff_in_sec
@@ -105,11 +104,15 @@ class ImageWatchdog():
 
     def monitor_watchfolder(self):
         filenames, _ = self.getFileList()
+        if len(filenames) > 0:
+            self.incomingfile_time = datetime.datetime.today()
+            while len(filenames) < self.num_images_per_shot:
+                time.sleep(0.1)
+                filenames, _ = self.getFileList()
         if len(filenames) >= self.num_images_per_shot:
             self.new_imagenames = filenames[0:self.num_images_per_shot]
             new_images_bool = True
-            self.incomingfile_time = datetime.datetime.today()
-            self.previous_update_time = datetime.datetime.now()
+            # self.incomingfile_time = datetime.datetime.today()
         else:
             new_images_bool = False
         return new_images_bool
