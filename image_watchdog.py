@@ -285,10 +285,8 @@ if __name__ == "__main__":
         # n_images = int(input('Enter number of image files per shot: '))
         # watchdog.main(num_images_per_shot=n_images)
         watchdog.main()
-    elif len(sys.argv) == 3:
-        runfolder = sys.argv[1]
-        n_images = int(sys.argv[2])
-        print(runfolder, n_images)
+    elif len(sys.argv) == 2:
+        n_images = int(sys.argv[1])
         watchdog = ImageWatchdog(
-            num_images_per_shot=n_images, runfolder=runfolder)
+            num_images_per_shot=n_images)
         watchdog.main()
