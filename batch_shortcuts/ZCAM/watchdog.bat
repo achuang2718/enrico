@@ -1,9 +1,10 @@
 ECHO Starting enrico...
 :: activate conda environment
-CD /d C:\Users\Fermi1\anaconda3\Scripts
+CD C:\Users\ZCAM-Fermi1\anaconda3\Scripts
 CALL activate.bat
+CALL conda.bat activate enrico
 
-CD /d D:\Fermidata1\enrico
+CD C:\Users\ZCAM-Fermi1\Documents\Github\enrico
 ECHO DID YOU CLOSE THE PREVIOUS INSTANCE OF THE WATCHDOG?
 PAUSE
 START python image_watchdog.py
