@@ -47,6 +47,9 @@ class MSerial:
                         'PODT horiz': (3, 0), 'PODT vert': (3, 1),
                         'unused': (3, 2),
                         }
+        print('Nine available channels should appear below.')
+        self.sendrecv('INI')
+        self.sendrecv('ACC')
 
     def send(self, cmd):
         """Send a command to the picomotor driver."""
@@ -319,11 +322,11 @@ class PicomotorGUI(QMainWindow):
                                       for idx in range(0, 3)}
 
 
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    app.setStyle('Fusion')
 
-app = QApplication(sys.argv)
-app.setStyle('Fusion')
+    w = PicomotorGUI()
+    w.show()
 
-w = PicomotorGUI()
-w.show()
-
-app.exec_()
+    app.exec_()

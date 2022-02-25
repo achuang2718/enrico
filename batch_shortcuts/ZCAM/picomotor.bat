@@ -1,9 +1,10 @@
 ECHO Starting enrico...
 :: activate conda environment
-CD /d C:\Users\Fermi1\anaconda3\Scripts
+CD C:\Users\ZCAM-Fermi1\anaconda3\Scripts
 CALL activate.bat
+CALL conda.bat activate enrico
 
-CD /d D:\Fermidata1\enrico\instruments
+CD C:\Users\ZCAM-Fermi1\Documents\Github\enrico\instruments
 ECHO STARTING PICOMOTOR GUI
 START python picomotor.py
 ECHO picomotor python console started in a new window
