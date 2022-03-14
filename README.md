@@ -1,5 +1,7 @@
 enrico, the Fermi1 lab assistant
 
+Handles image logging, live analysis, and plotting for the day-to-day data taking in Fermi1.
+
 Getting started
 
 *System Requirements*
