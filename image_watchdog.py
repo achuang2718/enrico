@@ -10,6 +10,7 @@ import warnings
 from measurement_directory import measurement_directory, todays_measurements
 import enrico_bot
 import logging
+from pathlib import Path
 
 
 class ImageWatchdog():
@@ -19,7 +20,7 @@ class ImageWatchdog():
 
     def __init__(self, watchfolder=os.path.join(os.path.dirname(__file__), 'images'),
                  num_images_per_shot=1, refresh_time=0.3, backup_to_bec1server=True, MONTH_DIR_FMT='%Y%m',
-                 max_time_diff_in_sec=8, min_time_diff_in_sec=0, max_idle_time=60 * 3, runfolder=None):
+                 max_time_diff_in_sec=10, min_time_diff_in_sec=0, max_idle_time=60 * 3, runfolder=None):
         self.MONTH_DIR_FMT = MONTH_DIR_FMT
         self.init_logger()
         self.watchfolder = watchfolder
@@ -103,9 +104,10 @@ class ImageWatchdog():
                 os.mkdir(path)
 
     def monitor_watchfolder(self):
-        filenames, _ = self.getFileList()
+        filenames, paths = self.getFileList()
         if len(filenames) > 0:
-            self.incomingfile_time = datetime.datetime.today()
+            self.incomingfile_time = datetime.datetime.fromtimestamp(
+                Path(paths[0]).stat().st_ctime)
             while len(filenames) < self.num_images_per_shot:
                 time.sleep(0.1)
                 filenames, _ = self.getFileList()
