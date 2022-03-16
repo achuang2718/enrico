@@ -26,17 +26,23 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 import enrico_bot
+from status_monitor import StatusMonitor
+
+wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=5) #this script does not use the full functionality of the StatusMonitor class.
+    #It only uses the Slack messaging functionality. Ideally, the wavemeter should be a class of its own that 
+    #inherits from StatusMonitor.
 
 WAVEMETER_READ_TIME_OFFSET = 3 #Time wavemeter reading should _precede_ breadboard timestamp by
 
 STRIKES_YOURE_OUT = 3 #Number of times to allow read to fail before abort
-ALLOWED_FREQUENCY_CHANGE = 0.001 #Amount to allow frequency to change before throwing an "out of lock" warn
+ALLOWED_FREQUENCY_CHANGE = 0.002 #THz, Amount to allow frequency to change before throwing an "out of lock" warn
+IDEAL_READING = 390.98352 #THz
 #EXPOSURE_MULTIPLIER = 1.2
 #EXPOSURE_LOWER_RAIL = 1
 #EXPOSURE_UPPER_RAIL = 1000
 
 def main():
-    refresh_time = 1  # seconds
+    refresh_time = 0.5  # seconds
     print("Did you remember to sync the os clock to a web server?")
     print('Reading wavemeter, readings will output below ... \n')
     old_run_dict = get_newest_run_dict(bc)
@@ -64,9 +70,14 @@ def main():
                     time.sleep(0.1)
                 if(fail_counter >= STRIKES_YOURE_OUT):
                     if(wavemeter_reading == -4): #Overexposed
-                        print('wavemeter.py terminating due to overexposure. \n')
-                        enrico_bot.post_message('Wavemeter overexposed, wavemeter.py terminated. Restart if taking data.')
-                        exit(-1) #Todo: Handle this more gracefully!!!
+                        # enrico_bot.post_message('Wavemeter overexposed, wavemeter.py paused. Restart if taking data.')
+                        # overexposed_input = input('Wavemeter overexposed, adjust exposure. Restart readings? [y/n]: ')
+                        # if overexposed_input == 'n':
+                        #     print('exiting.')
+                        #     exit(-1)
+                        # elif overexposed_input == 'y':
+                        #     print('restarting...')
+                        fail_counter = 0
                     if(wavemeter_reading == -3): #Underexposed
                         warning_message = 'Wavemeter underexposed, adjust exposure time.'
                         print(warning_message)
@@ -104,7 +115,7 @@ def main():
             time_diffs[time_diffs < WAVEMETER_READ_TIME_OFFSET] = -np.infty
             min_idx = np.argmin(np.abs(time_diffs - WAVEMETER_READ_TIME_OFFSET))
             min_time_diff_from_ideal = time_diffs[min_idx] - WAVEMETER_READ_TIME_OFFSET
-            max_time_diff_tolerance = 5  # seconds
+            max_time_diff_tolerance = 20  # seconds
             if np.abs(min_time_diff_from_ideal) < max_time_diff_tolerance:
                 closest_wavemeter_time = list(
                     wavemeter_backlog.keys())[min_idx]
@@ -127,9 +138,12 @@ def main():
                 if not time_warned:
                     enrico_bot.post_message(warning_message)
                     time_warned = True
-            if(np.abs(initial_frequency - wavemeter_reading) > ALLOWED_FREQUENCY_CHANGE and (not frequency_warned)):
-                enrico_bot.post_message("Wavemeter reading has changed by 1 GHz after run id: {id}. Check laser lock.".format(id = str(new_run_id)))
-                frequency_warned = True
+            if np.abs(IDEAL_READING - wavemeter_reading) > ALLOWED_FREQUENCY_CHANGE:
+                wavemeter_status_monitor.warn_on_slack(
+                    "Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint at {ideal_freq}THz after run id: {id}. Check laser lock.".format(
+                        id = str(new_run_id), 
+                        freq_change=str(ALLOWED_FREQUENCY_CHANGE*1000), 
+                        ideal_freq=str(IDEAL_READING)))
 
         # Wait before checking again
         time.sleep(refresh_time)
