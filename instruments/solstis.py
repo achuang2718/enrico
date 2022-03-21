@@ -3,15 +3,19 @@ import socket
 from collections import Counter
 import json
 from warnings import warn
+import numpy as np
+from time import sleep
 
 # default params for socket
 DEFAULT_SERVER_IP = '192.168.1.222'  # of TiSa
 DEFAULT_PORT = 39933
 DEFAULT_TIMEOUT = 5
 DEFAULT_TRANSMISSION_ID = 1
-DEFAULT_CLIENT_IP = '192.168.1.4' #currently set for the analysis PC
+DEFAULT_CLIENT_IP = '192.168.1.4'  # currently set for the analysis PC
 print('Remember to set CONFIGURE -> NETWORK SETTINGS -> REMOTE INTERFACE in the web interface to match the client IP.')
 DEBUG_MODE = False
+WAVEMETER_REFRESH_TIME = 0.5
+ETALON_STEP_SIZE = 0.1
 
 
 class SolstisError(Exception):
@@ -46,7 +50,7 @@ class Solstis():
         print('Closing connection to TiSa...')
         self.sock.close()
 
-    def _send_msg(self, operation : str, params : dict={}, debug=DEBUG_MODE):
+    def _send_msg(self, operation: str, params: dict={}, debug=DEBUG_MODE):
         '''
         Function to carry out the most basic communication send function
         transmission_id ~ Arbitrary(?) integer
@@ -88,7 +92,7 @@ class Solstis():
             print(data)
         return json.loads(data)
 
-    def _verify_msg(self, msg, operation : str):
+    def _verify_msg(self, msg, operation: str):
         '''
         Verifies that the received message matches the sent request, at a syntactical level.
         Messages still need to be parsed on a case-by-case basis.
@@ -108,7 +112,7 @@ class Solstis():
                   '' did not match expected operation command of: ' + operation
             raise SolstisError(msg)
 
-    def _send_and_recv_status(self, operation : str, params : dict={}, debug=DEBUG_MODE, status_nested=True):
+    def _send_and_recv_status(self, operation: str, params: dict={}, debug=DEBUG_MODE, status_nested=True):
         '''
         Sends and receives status of operation.
         Returns:
@@ -169,8 +173,10 @@ class Solstis():
                                   'resonator_voltage', 'output_monitor', 'etalon_pd_dc', 'status']
         bare_params_to_parse = ['temperature_status',
                                 'etalon_lock', 'cavity_lock', 'ecd_lock', 'dither']
-        return_dict = {param: params[param][0] for param in nested_params_to_parse}
-        return_dict.update({param: params[param] for param in bare_params_to_parse})
+        return_dict = {param: params[param][0]
+                       for param in nested_params_to_parse}
+        return_dict.update({param: params[param]
+                            for param in bare_params_to_parse})
         if params['ecd_voltage'] == 'not_fitted':
             return_dict['ecd_voltage'] = -float('inf')
         else:
@@ -219,7 +225,47 @@ class Solstis():
         else:
             raise SolstisError('etalon_lock Failed; Reason Unknown')
 
-#THE SECTION BELOW CURRENTLY DOES NOT TUNE THE TARGET LAMBDA
+    def _get_etalon_setting(self):
+        MAX_ETALON_VOLTAGE = 196.4
+        self.etalon_setting = self.get_status(
+        )['etalon_voltage'] / MAX_ETALON_VOLTAGE * 100  # percent
+
+    def software_lock(self, target_frequency, wavemeter, frequency_diff_threshold=2e-3, timeout=30, etalon_step_size=ETALON_STEP_SIZE,
+                      wavemeter_refresh=WAVEMETER_REFRESH_TIME):
+        """
+        Uses tune_etalon to coarsely set the frequency before engaging the etalon lock. Will time out
+        Parameters:
+            target_frequency ~ in THz (float), typically read from wavemeter.
+            wavemeter ~ object that handles reading the wavemeter.
+            frequency_diff_threshold ~ in THz (float). Specifies the threshold for a successful lock.
+            timeout ~ in seconds (float), after which software_lock will stop trying.
+            etalon_step_size ~ percentage (float).
+        Returns:
+            lock_achieved ~ (bool)
+
+        Should exit if the etalon voltage rails, times out, or too many relocks in a certain time span.
+        """
+        current_frequency = wavemeter.GetFrequency()
+        while abs(current_frequency - target_frequency) > frequency_diff_threshold:
+            if current_frequency > 0:  # negative readings correspond to a wavemeter error
+                # etalon tuning parameter is typically increased to decrease the frequency
+                self.etalon_lock(False)
+                etalon_sign = np.sign(current_frequency - target_frequency)
+                print('current frequency (THz): ' + str(current_frequency))
+                self._get_etalon_setting()
+                new_etalon_setting = self.etalon_setting + etalon_sign * etalon_step_size
+                print('trying etalon_tune: ' + str(new_etalon_setting))
+                input()
+                if new_etalon_setting < 0.1 or new_etalon_setting > 99.9:
+                    return False  # software lock fails if etalon rails
+                self.tune_etalon(new_etalon_setting)
+                self.etalon_lock(True)
+                sleep(wavemeter_refresh)
+                current_frequency = wavemeter.GetFrequency()
+        return True
+
+
+# THE SECTION BELOW CURRENTLY DOES NOT TUNE THE TARGET LAMBDA
 ##################################################################################
     # def set_wave_m(self, wavelength):
     #     '''Sets the wavelength based on wavelength table
@@ -242,3 +288,13 @@ class Solstis():
     #     else:
     #         raise SolstisError('Wavelength out of range.')
 ##################################################################################
+
+def main():
+    from wlm import WavelengthMeter
+    my_wlm = WavelengthMeter()
+    IDEAL_FREQ = 390.983
+    try:
+        my_tisa = Solstis()
+        my_tisa.software_lock(IDEAL_FREQ, my_wlm)
+    finally:
+        my_tisa.__exit__()
