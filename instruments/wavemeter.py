@@ -26,7 +26,8 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 import enrico_bot
-from status_monitor import StatusMonitor
+from status_monitor import StatusMonitor, alex_chuang_id
+from solstis import Solstis
 
 wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=5) #this script does not use the full functionality of the StatusMonitor class.
     #It only uses the Slack messaging functionality. Ideally, the wavemeter should be a class of its own that 
@@ -42,6 +43,7 @@ IDEAL_READING = 390.98352 #THz
 #EXPOSURE_UPPER_RAIL = 1000
 
 def main():
+    my_tisa = Solstis()
     refresh_time = 0.5  # seconds
     print("Did you remember to sync the os clock to a web server?")
     print('Reading wavemeter, readings will output below ... \n')
@@ -139,11 +141,16 @@ def main():
                     enrico_bot.post_message(warning_message)
                     time_warned = True
             if np.abs(IDEAL_READING - wavemeter_reading) > ALLOWED_FREQUENCY_CHANGE:
-                wavemeter_status_monitor.warn_on_slack(
-                    "Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint at {ideal_freq}THz after run id: {id}. Check laser lock.".format(
-                        id = str(new_run_id), 
-                        freq_change=str(ALLOWED_FREQUENCY_CHANGE*1000), 
-                        ideal_freq=str(IDEAL_READING)))
+                try:
+                    lock_success, error_message = my_tisa.software_lock(IDEAL_READING, wlm)
+                except:
+                    lock_success, error_message = False, alex_chuang_id + 'Software lock crashed.'
+                if not lock_success:
+                    wavemeter_status_monitor.warn_on_slack("Software lock failed: " + error_message + 
+                        "... Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint at {ideal_freq}THz after run id: {id}. Check laser lock.".format(
+                            id = str(new_run_id), 
+                            freq_change=str(ALLOWED_FREQUENCY_CHANGE*1000), 
+                            ideal_freq=str(IDEAL_READING)))
 
         # Wait before checking again
         time.sleep(refresh_time)
