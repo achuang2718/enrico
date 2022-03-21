@@ -1,13 +1,17 @@
 # adapted from solstis_tcpip repo by rywais, https://github.com/Rywais/solstis_tcpip
 import socket
 from collections import Counter
+import json
+from warnings import warn
 
 # default params for socket
 DEFAULT_SERVER_IP = '192.168.1.222'  # of TiSa
 DEFAULT_PORT = 39933
 DEFAULT_TIMEOUT = 5
 DEFAULT_TRANSMISSION_ID = 1
-DEFAULT_CLIENT_IP = '192.168.1.4'
+DEFAULT_CLIENT_IP = '192.168.1.4' #currently set for the analysis PC
+print('Remember to set CONFIGURE -> NETWORK SETTINGS -> REMOTE INTERFACE in the web interface to match the client IP.')
+DEBUG_MODE = False
 
 
 class SolstisError(Exception):
@@ -26,12 +30,13 @@ class Solstis():
     '''
 
     def __init__(self, server_address=DEFAULT_SERVER_IP, port=DEFAULT_PORT, timeout=DEFAULT_TIMEOUT,
-                 transmission_id=DEFAULT_TRANSMISSION_ID, client_address=DEFAULT_CLIENT_IP):
+                 transmission_id=DEFAULT_TRANSMISSION_ID, client_address=DEFAULT_CLIENT_IP,
+                 debug=True):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((address, port))
+        self.sock.connect((server_address, port))
         self.sock.settimeout(timeout)
         self.transmission_id = transmission_id
-        self.DEFAULT_CLIENT_IP = client_address
+        self.client_address = client_address
         self._start_link()
 
     def __enter__(self):
@@ -41,7 +46,7 @@ class Solstis():
         print('Closing connection to TiSa...')
         self.sock.close()
 
-    def _send_msg(self, operation -> str, params -> dict={}, debug=False):
+    def _send_msg(self, operation : str, params : dict={}, debug=DEBUG_MODE):
         '''
         Function to carry out the most basic communication send function
         transmission_id ~ Arbitrary(?) integer
@@ -55,16 +60,16 @@ class Solstis():
         send_msg = json.dumps(command).encode('utf8')
         if debug == True:
             print(send_msg)
-        self.socket.sendall(send_msg)
+        self.sock.sendall(send_msg)
 
-    def _recv_msg(self, timeout=10.):
-        """
+    def _recv_msg(self, timeout=10., debug=DEBUG_MODE):
+        '''
         Receives stream until a full json payload is completed.
         Returns:
             A dictionary parsed from the json payload.
-        """
+        '''
         s = self.sock
-        data += s.recv(1024).decode('utf8')
+        data = s.recv(1024).decode('utf8')
 
         # Check that the message starts with a '{'
         if data[0] != '{':
@@ -76,22 +81,24 @@ class Solstis():
             my_counter = Counter(data)
             # reception completed after receiving final right-brace
             if my_counter['{'] == my_counter['}']:
-                return json.loads(data)
+                break
             else:
                 data += s.recv(1024).decode('utf8')
+        if debug:
+            print(data)
+        return json.loads(data)
 
-    @staticmethod
-    def _verify_msg(msg, operation -> str):
-        """
+    def _verify_msg(self, msg, operation : str):
+        '''
         Verifies that the received message matches the sent request, at a syntactical level.
         Messages still need to be parsed on a case-by-case basis.
-        """
+        '''
         msg_ID = msg['message']['transmission_id'][0]
         msg_OP = msg['message']['op']
-        if msg_ID != self.transmission_id:
-            err_msg = 'Message with ID' + str(msg_ID) + ' did not match expected ID of: ' +\
-                str(self.transmission_id)
-            raise SolstisError(err_msg)
+        # if msg_ID != self.transmission_id:
+        #     err_msg = 'Message with ID' + str(msg_ID) + ' did not match expected ID of: ' +\
+        #         str(self.transmission_id)
+        #     raise SolstisError(err_msg)
         if msg_OP == 'parse_fail':
             err_msg = 'Message with ID ' + str(msg_ID) + ' failed to parse.'
             err_msg += '\n\n' + str(msg)
@@ -101,13 +108,13 @@ class Solstis():
                   '' did not match expected operation command of: ' + operation
             raise SolstisError(msg)
 
-    def _send_and_recv_status(self, operation -> str, params -> dict={}, debug=False, status_nested=True):
-        """
+    def _send_and_recv_status(self, operation : str, params : dict={}, debug=DEBUG_MODE, status_nested=True):
+        '''
         Sends and receives status of operation.
         Returns:
             msg ~ json payload parsed as dict
             status ~ either a string (e.g. 'ok') or status code int (e.g. 1), depending on the operation
-        """
+        '''
         self._send_msg(operation=operation, params=params, debug=debug)
         msg = self._recv_msg()
         self._verify_msg(msg, operation=operation + '_reply')
@@ -127,27 +134,6 @@ class Solstis():
         else:
             raise SolstisError(
                 'Unknown error: Could not determine link status')
-
-    def move_wave_t(self, wavelength):
-        '''Sets the wavelength based on wavelength table
-
-        Parameters:
-          sock ~ socket object to use
-          wavelength ~ (float) wavelength set point
-          transmission_id ~ (int) Arbitrary integer for communications
-        Returns:
-          Nothing
-        '''
-
-        _, status = self._send_and_recv_status(
-            'move_wave_t', {'wavelength': [wavelength]}, status_nested=True)
-        if status == 0:
-            pass
-        elif status == 1:
-            raise SolstisError(
-                'move_wave_t: Failed, is your wavemeter configured?')
-        else:
-            raise SolstisError('Wavelength out of range.')
 
     def get_status(self):
         '''Retrieves the system status information available to the user
@@ -183,13 +169,13 @@ class Solstis():
                                   'resonator_voltage', 'output_monitor', 'etalon_pd_dc', 'status']
         bare_params_to_parse = ['temperature_status',
                                 'etalon_lock', 'cavity_lock', 'ecd_lock', 'dither']
-        return_dict = {params[param][0] for param in nested_params_to_parse}
-        return_dict += {params[param] for param in bare_params_to_parse}
+        return_dict = {param: params[param][0] for param in nested_params_to_parse}
+        return_dict.update({param: params[param] for param in bare_params_to_parse})
         if params['ecd_voltage'] == 'not_fitted':
             return_dict['ecd_voltage'] = -float('inf')
         else:
             return_dict['ecd_voltage'] = params['ecd_voltage'][0]
-
+        warn('BUG: etalon_lock status does not reflect the physical state of the etalon lock!')
         return return_dict
 
     def tune_etalon(self, setting):
@@ -213,7 +199,7 @@ class Solstis():
             raise SolstisError('tune_etalon Failed; Reason Unknown')
 
     def etalon_lock(self, lock):
-        """Either locks or unlocks the etalon
+        '''Either locks or unlocks the etalon
 
         Parameters:
           sock ~ Socket object to use for communications
@@ -223,22 +209,36 @@ class Solstis():
           Nothing on success
         Raises:
           SolstisError on failure
-        """
-        lock_command_dict = {True: "on", False: "off"}
+        '''
+        lock_command_dict = {True: 'on', False: 'off'}
 
         _, status = self._send_and_recv_status(
-            "etalon_lock", {"operation": lock_command_dict[lock]})
+            'etalon_lock', {'operation': lock_command_dict[lock]})
         if status == 0:
             return
         else:
-            raise SolstisError("etalon_lock Failed; Reason Unknown")
+            raise SolstisError('etalon_lock Failed; Reason Unknown')
 
+#THE SECTION BELOW CURRENTLY DOES NOT TUNE THE TARGET LAMBDA
+##################################################################################
+    # def set_wave_m(self, wavelength):
+    #     '''Sets the wavelength based on wavelength table
 
-def main():
-    with Solstis() as my_tisa:
-        status_dict = my_tisa.get_status()
-        print(status_dict)
+    #     Parameters:
+    #       sock ~ socket object to use
+    #       wavelength ~ (float) wavelength set point
+    #       transmission_id ~ (int) Arbitrary integer for communications
+    #     Returns:
+    #       Nothing
+    #     '''
 
-
-if __name__ == '__main__':
-    main()
+    #     _, status = self._send_and_recv_status(
+    #         'set_wave_m', {'wavelength': [wavelength]}, status_nested=True)
+    #     if status == 0:
+    #         pass
+    #     elif status == 1:
+    #         raise SolstisError(
+    #             'move_wave_t: Failed, is your wavemeter configured?')
+    #     else:
+    #         raise SolstisError('Wavelength out of range.')
+##################################################################################
