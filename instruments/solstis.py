@@ -15,7 +15,7 @@ DEFAULT_TRANSMISSION_ID = 1
 DEFAULT_CLIENT_IP = '192.168.1.4'  # currently set for the analysis PC
 print('Remember to set CONFIGURE -> NETWORK SETTINGS -> REMOTE INTERFACE in the web interface to match the client IP.')
 DEBUG_MODE = False
-WAVEMETER_REFRESH_TIME = 1
+WAVEMETER_REFRESH_TIME = 2
 ETALON_STEP_SIZE = 0.1
 SOFTWARE_LOCK_TIMEOUT = 3 * 60  # seconds
 # seconds. Outputs an error message if software relock is engaged twice in this interval.
@@ -301,7 +301,7 @@ class Solstis():
                     print('Frequency within {thresh}, engaging etalon lock.'.format(
                         thresh=str(lock_engage_threshold)))
                     self.etalon_lock(True)
-                with open(log_filename) as f:
+                with open(log_filename, 'a') as f:
                     f.write('{timestamp}, {etalon}, {freq}'.format(timestamp=str(datetime.datetime.now()),
                                                                    etalon=str(new_etalon_setting), freq=str(current_frequency)))
             else:
