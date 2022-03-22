@@ -23,6 +23,7 @@ MIN_RELOCK_INTERVAL = 5 * 60
 LOG_FILENAME = 'tisa_softlock.csv'
 ETALON_DIFF_THRESHOLD = 1  # percentage
 LOCK_ENGAGE_THRESHOLD = 10e-3  # THz
+GAIN_ETALON = 8 / 30e-3
 
 
 class SolstisError(Exception):
@@ -247,7 +248,8 @@ class Solstis():
                       etalon_step_size=ETALON_STEP_SIZE,
                       wavemeter_refresh=WAVEMETER_REFRESH_TIME, relock_interval=MIN_RELOCK_INTERVAL,
                       log_filename=LOG_FILENAME, etalon_diff_threshold=ETALON_DIFF_THRESHOLD,
-                      lock_engage_threshold=LOCK_ENGAGE_THRESHOLD):
+                      lock_engage_threshold=LOCK_ENGAGE_THRESHOLD,
+                      gain_etalon: GAIN_ETALON):
         """
         Uses tune_etalon to coarsely set the frequency before engaging the etalon lock. Will time out
         Parameters:
@@ -280,7 +282,7 @@ class Solstis():
                     self.etalon_setting = inferred_setting
                     return False, """Inferred etalon setting {infer}% and etalon setting in internal memory {mem}% differs
                     by greater than 1%. Attempting to reset internal memory. Try restarting TiSa softlock if this fails.""".format(infer=str(inferred_setting),
-                                                                                mem=str(old_seting))
+                                                                                                                                   mem=str(old_setting))
                 self.last_relock_time = perf_counter()
                 self.etalon_lock(False)
                 elapsed_time = perf_counter() - t_start
@@ -288,8 +290,10 @@ class Solstis():
                 # etalon tuning parameter is typically increased to decrease the frequency
                 etalon_sign = np.sign(current_frequency - target_frequency)
                 print('current frequency (THz): ' + str(current_frequency))
-                new_etalon_setting = self.etalon_setting + etalon_sign * etalon_step_size
+                new_etalon_setting = self.etalon_setting + etalon_sign * \
+                    gain_etalon * abs(current_frequency - target_frequency)
                 print('\ntrying etalon_tune: ' + str(new_etalon_setting))
+                input('continue?')
                 if new_etalon_setting < 0.1 or new_etalon_setting > 99.9:
                     return False, 'Etalon railed.'  # software lock fails if etalon rails
                 elif elapsed_time > timeout:
@@ -344,6 +348,7 @@ def main():
         print(lock_message)
     finally:
         my_tisa.__exit__()
+
 
 if __name__ == "__main__":
     main()
