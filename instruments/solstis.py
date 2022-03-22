@@ -50,7 +50,7 @@ class Solstis():
         self.client_address = client_address
         self._start_link()
         self.last_relock_time = None
-        self.etalon_lock = None
+        self.etalon_setting = None
 
     def __enter__(self):
         pass
@@ -240,8 +240,6 @@ class Solstis():
         inferred_setting = self.get_status(
         )['etalon_voltage'] / MAX_ETALON_VOLTAGE * 100
         if self.etalon_setting is None:
-            print('Etalon setting inferred at {setting}. IS THIS CORRECT?'.format(
-                setting=str(inferred_setting)))
             self.etalon_setting = inferred_setting
         return inferred_setting  # percent
 
@@ -278,9 +276,11 @@ class Solstis():
             if current_frequency > 0:  # negative readings correspond to a wavemeter error
                 inferred_setting = self._get_etalon_setting()
                 if abs(self.etalon_setting - inferred_setting) > etalon_diff_threshold:
+                    old_setting = self.etalon_setting
+                    self.etalon_setting = inferred_setting
                     return False, """Inferred etalon setting {infer}% and etalon setting in internal memory {mem}% differs
-                    by greater than 1%. Try restarting TiSa softlock.""".format(infer=str(inferred_setting),
-                                                                                mem=str(self.etalon_setting))
+                    by greater than 1%. Attempting to reset internal memory. Try restarting TiSa softlock if this fails.""".format(infer=str(inferred_setting),
+                                                                                mem=str(old_seting))
                 self.last_relock_time = perf_counter()
                 self.etalon_lock(False)
                 elapsed_time = perf_counter() - t_start
@@ -298,7 +298,7 @@ class Solstis():
                 sleep(wavemeter_refresh)
                 current_frequency = wavemeter.GetFrequency()
                 if abs(current_frequency - target_frequency) < lock_engage_threshold:
-                    print('Frequency within {thresh}, engaging etalon lock.'.format(
+                    print('Frequency within {thresh}THz, engaging etalon lock.'.format(
                         thresh=str(lock_engage_threshold)))
                     self.etalon_lock(True)
                 with open(log_filename, 'a') as f:
@@ -334,16 +334,16 @@ class Solstis():
     #         raise SolstisError('Wavelength out of range.')
 ##################################################################################
 
-# def main():
-#     from wlm import WavelengthMeter
-#     my_wlm = WavelengthMeter()
-#     IDEAL_FREQ = 390.983
-#     try:
-#         my_tisa = Solstis()
-#         lock_success, lock_message = my_tisa.software_lock(IDEAL_FREQ, my_wlm)
-#         print(lock_message)
-#     finally:
-#         my_tisa.__exit__()
+def main():
+    from wlm import WavelengthMeter
+    my_wlm = WavelengthMeter()
+    IDEAL_FREQ = 390.983
+    try:
+        my_tisa = Solstis()
+        lock_success, lock_message = my_tisa.software_lock(IDEAL_FREQ, my_wlm)
+        print(lock_message)
+    finally:
+        my_tisa.__exit__()
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

@@ -40,7 +40,7 @@ WAVEMETER_READ_TIME_OFFSET = 3
 STRIKES_YOURE_OUT = 3  # Number of times to allow read to fail before abort
 # THz, Amount to allow frequency to change before throwing an "out of lock" warn
 ALLOWED_FREQUENCY_CHANGE = 0.002
-IDEAL_READING = 390.98352  # THz
+IDEAL_READING = 390.99352  # THz
 #EXPOSURE_MULTIPLIER = 1.2
 #EXPOSURE_LOWER_RAIL = 1
 #EXPOSURE_UPPER_RAIL = 1000
@@ -154,6 +154,7 @@ def main():
                 except Exception as e:
                     lock_success, error_message = False, '<@{id}>'.format(
                         id=alex_chuang_id) + 'software lock runtime error: ' + str(e)
+                    raise e
                 if not lock_success:
                     wavemeter_status_monitor.warn_on_slack("Software lock failed: " + error_message +
                                                            """... Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint
