@@ -5,6 +5,7 @@ import json
 from warnings import warn
 import numpy as np
 from time import sleep, perf_counter
+import datetime
 
 # default params for socket
 DEFAULT_SERVER_IP = '192.168.1.222'  # of TiSa
@@ -16,8 +17,10 @@ print('Remember to set CONFIGURE -> NETWORK SETTINGS -> REMOTE INTERFACE in the 
 DEBUG_MODE = False
 WAVEMETER_REFRESH_TIME = 1
 ETALON_STEP_SIZE = 0.1
-SOFTWARE_LOCK_TIMEOUT = 3 * 60 #seconds
-MIN_RELOCK_INTERVAL = 5 * 60 #seconds. Outputs an error message if software relock is engaged twice in this interval.
+SOFTWARE_LOCK_TIMEOUT = 3 * 60  # seconds
+# seconds. Outputs an error message if software relock is engaged twice in this interval.
+MIN_RELOCK_INTERVAL = 5 * 60
+LOG_FILENAME = 'tisa_softlock.csv'
 
 
 class SolstisError(Exception):
@@ -233,8 +236,10 @@ class Solstis():
         self.etalon_setting = self.get_status(
         )['etalon_voltage'] / MAX_ETALON_VOLTAGE * 100  # percent
 
-    def software_lock(self, target_frequency, wavemeter, frequency_diff_threshold=500e-6, timeout=SOFTWARE_LOCK_TIMEOUT, etalon_step_size=ETALON_STEP_SIZE,
-                      wavemeter_refresh=WAVEMETER_REFRESH_TIME, relock_interval=MIN_RELOCK_INTERVAL):
+    def software_lock(self, target_frequency, wavemeter, frequency_diff_threshold=500e-6, timeout=SOFTWARE_LOCK_TIMEOUT,
+                      etalon_step_size=ETALON_STEP_SIZE,
+                      wavemeter_refresh=WAVEMETER_REFRESH_TIME, relock_interval=MIN_RELOCK_INTERVAL,
+                      log_filename=LOG_FILENAME):
         """
         Uses tune_etalon to coarsely set the frequency before engaging the etalon lock. Will time out
         Parameters:
@@ -250,13 +255,13 @@ class Solstis():
             lock_achieved ~ (bool)
             message ~ (str)
         """
-        #sometimes the TiSa will jump back to its happy place by unlocking and relocking
+        # sometimes the TiSa will jump back to its happy place by unlocking and relocking
         self.etalon_lock(False)
         sleep(wavemeter_refresh)
         self.etalon_lock(True)
         if self.last_relock_time is not None and (perf_counter() - self.last_relock_time) < relock_interval:
-            return False, 'Software lock has engaged twice in ' + str(relock_interval/60) + ' minutes.'
-        
+            return False, 'Software lock has engaged twice in ' + str(relock_interval / 60) + ' minutes.'
+
         current_frequency = wavemeter.GetFrequency()
         t_start = perf_counter()
         while abs(current_frequency - target_frequency) > frequency_diff_threshold:
@@ -265,7 +270,8 @@ class Solstis():
                 self.etalon_lock(False)
                 elapsed_time = perf_counter() - t_start
                 print('Elapsed time: ' + str(elapsed_time))
-                etalon_sign = np.sign(current_frequency - target_frequency) # etalon tuning parameter is typically increased to decrease the frequency
+                # etalon tuning parameter is typically increased to decrease the frequency
+                etalon_sign = np.sign(current_frequency - target_frequency)
                 print('current frequency (THz): ' + str(current_frequency))
                 self._get_etalon_setting()
                 new_etalon_setting = self.etalon_setting + etalon_sign * etalon_step_size
@@ -278,6 +284,9 @@ class Solstis():
                 self.etalon_lock(True)
                 sleep(wavemeter_refresh)
                 current_frequency = wavemeter.GetFrequency()
+                with open(log_filename) as f:
+                    f.write('{timestamp}, {etalon}, {freq}'.format(timestamp=str(datetime.datetime.now()),
+                                                                   etalon=str(new_etalon_setting), freq=str(current_frequency)))
             else:
                 return False, 'Invalid wavemeter reading. Is the wavemeter underexposed?'
 
