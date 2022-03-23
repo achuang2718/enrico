@@ -33,7 +33,7 @@ from status_monitor import StatusMonitor, alex_chuang_id
 from solstis import Solstis
 
 # this script does not use the full functionality of the StatusMonitor class.
-wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=15)
+wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=10)
 # It only uses the Slack messaging functionality. Ideally, the wavemeter should be a class of its own that
 # inherits from StatusMonitor.
 
@@ -42,7 +42,7 @@ WAVEMETER_READ_TIME_OFFSET = 3
 
 STRIKES_YOURE_OUT = 3  # Number of times to allow read to fail before abort
 ALLOWED_FREQUENCY_CHANGE = 0.002
-IDEAL_READING = 390.99352  # THz
+IDEAL_READING = 389.266  # THz
 #EXPOSURE_MULTIPLIER = 1.2
 #EXPOSURE_LOWER_RAIL = 1
 #EXPOSURE_UPPER_RAIL = 1000
@@ -148,25 +148,27 @@ def main():
                 if not time_warned:
                     enrico_bot.post_message(warning_message)
                     time_warned = True
-            if np.abs(IDEAL_READING - wavemeter_reading) > ALLOWED_FREQUENCY_CHANGE:
-                try:
-                    lock_success, debugging_message = my_tisa.software_lock(
-                        IDEAL_READING, wlm)
-                except Exception as e:
-                    lock_success, debugging_message = False, '<@{id}>'.format(
-                        id=alex_chuang_id) + 'software lock runtime error: ' + str(e)
-                    raise e
-                if len(debugging_message) != 0:
-                    if not lock_success:
-                        wavemeter_status_monitor.warn_on_slack("Software lock failed: " + debugging_message +
-                                                               "... Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint at {ideal_freq}THz after run id: {id}. Check laser lock.".format(
-                                                                   id=str(
-                                                                       new_run_id),
-                                                                   freq_change=str(
-                                                                       ALLOWED_FREQUENCY_CHANGE * 1000),
-                                                                   ideal_freq=str(IDEAL_READING)))
-                    else:
-                        wavemeter_status_monitor.warn_on_slack('Software lock successful, but :' + debugging_message)
+        if np.abs(IDEAL_READING - wavemeter_reading) > ALLOWED_FREQUENCY_CHANGE:
+            try:
+                wavemeter_status_monitor.warn_on_slack('TiSa software lock engaging, setpoint {pt}THz'.format(pt
+                    =str(IDEAL_READING)))
+                lock_success, debugging_message = my_tisa.software_lock(
+                    IDEAL_READING, wlm)
+            except Exception as e:
+                lock_success, debugging_message = False, '<@{id}>'.format(
+                    id=alex_chuang_id) + 'software lock runtime error: ' + str(e)
+                raise e
+            if len(debugging_message) != 0:
+                if not lock_success:
+                    wavemeter_status_monitor.warn_on_slack("Software lock failed: " + debugging_message +
+                                                           "... Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint at {ideal_freq}THz after run id: {id}. Check laser lock.".format(
+                                                               id=str(
+                                                                   new_run_id),
+                                                               freq_change=str(
+                                                                   ALLOWED_FREQUENCY_CHANGE * 1000),
+                                                               ideal_freq=str(IDEAL_READING)))
+                else:
+                    wavemeter_status_monitor.warn_on_slack('Software lock successful, but :' + debugging_message)
 
         # Wait before checking again
         time.sleep(refresh_time)
