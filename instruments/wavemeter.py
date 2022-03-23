@@ -166,7 +166,7 @@ def main():
                                                                        ALLOWED_FREQUENCY_CHANGE * 1000),
                                                                    ideal_freq=str(IDEAL_READING)))
                     else:
-                        wavemeter_status_monitor.warn_on_slack('Software lock successful, but :' debugging_message)
+                        wavemeter_status_monitor.warn_on_slack('Software lock successful, but :' + debugging_message)
 
         # Wait before checking again
         time.sleep(refresh_time)
