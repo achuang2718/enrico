@@ -1,3 +1,6 @@
+#logs wavemeter readings to breadboard and relocks the TiSa coarsely using etalon tune and the wavemeter reading.
+#needs refactoring!
+
 # append main enrico folder to python path
 import os
 import sys
@@ -30,7 +33,7 @@ from status_monitor import StatusMonitor, alex_chuang_id
 from solstis import Solstis
 
 # this script does not use the full functionality of the StatusMonitor class.
-wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=1)
+wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=15)
 # It only uses the Slack messaging functionality. Ideally, the wavemeter should be a class of its own that
 # inherits from StatusMonitor.
 
@@ -38,7 +41,6 @@ wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=1)
 WAVEMETER_READ_TIME_OFFSET = 3
 
 STRIKES_YOURE_OUT = 3  # Number of times to allow read to fail before abort
-# THz, Amount to allow frequency to change before throwing an "out of lock" warn
 ALLOWED_FREQUENCY_CHANGE = 0.002
 IDEAL_READING = 390.99352  # THz
 #EXPOSURE_MULTIPLIER = 1.2
@@ -55,7 +57,6 @@ def main():
     old_run_id = old_run_dict['run_id']
     print("Initial run ID: " + str(old_run_id))
     time_warned = False
-    frequency_warned = False
     wavemeter_error_warned = False
     wlm = WavelengthMeter()  # Initialize a wavemeter object
     initial_frequency = wlm.GetFrequency()
@@ -149,23 +150,23 @@ def main():
                     time_warned = True
             if np.abs(IDEAL_READING - wavemeter_reading) > ALLOWED_FREQUENCY_CHANGE:
                 try:
-                    lock_success, error_message = my_tisa.software_lock(
+                    lock_success, debugging_message = my_tisa.software_lock(
                         IDEAL_READING, wlm)
                 except Exception as e:
-                    lock_success, error_message = False, '<@{id}>'.format(
+                    lock_success, debugging_message = False, '<@{id}>'.format(
                         id=alex_chuang_id) + 'software lock runtime error: ' + str(e)
                     raise e
-                if not lock_success:
-                    wavemeter_status_monitor.warn_on_slack("Software lock failed: " + error_message +
-                                                           """... Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint
-                                                           at {ideal_freq}THz after run id: {id}. Check laser lock.""".format(
-                                                               id=str(
-                                                                   new_run_id),
-                                                               freq_change=str(
-                                                                   ALLOWED_FREQUENCY_CHANGE * 1000),
-                                                               ideal_freq=str(IDEAL_READING)))
-                else:
-                    wavemeter_status_monitor.warn_on_slack(error_message)
+                if len(debugging_message) != 0:
+                    if not lock_success:
+                        wavemeter_status_monitor.warn_on_slack("Software lock failed: " + debugging_message +
+                                                               "... Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint at {ideal_freq}THz after run id: {id}. Check laser lock.".format(
+                                                                   id=str(
+                                                                       new_run_id),
+                                                                   freq_change=str(
+                                                                       ALLOWED_FREQUENCY_CHANGE * 1000),
+                                                                   ideal_freq=str(IDEAL_READING)))
+                    else:
+                        wavemeter_status_monitor.warn_on_slack('Software lock successful, but :' debugging_message)
 
         # Wait before checking again
         time.sleep(refresh_time)

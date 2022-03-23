@@ -16,14 +16,13 @@ DEFAULT_CLIENT_IP = '192.168.1.4'  # currently set for the analysis PC
 print('Remember to set CONFIGURE -> NETWORK SETTINGS -> REMOTE INTERFACE in the web interface to match the client IP.')
 DEBUG_MODE = False
 WAVEMETER_REFRESH_TIME = 2
-ETALON_STEP_SIZE = 0.1
 SOFTWARE_LOCK_TIMEOUT = 3 * 60  # seconds
 # seconds. Outputs an error message if software relock is engaged twice in this interval.
 MIN_RELOCK_INTERVAL = 5 * 60
 LOG_FILENAME = 'tisa_softlock.csv'
 ETALON_DIFF_THRESHOLD = 1  # percentage
 LOCK_ENGAGE_THRESHOLD = 10e-3  # THz
-GAIN_ETALON = 8 / 30e-3
+GAIN_ETALON = 8 / 30e-3  # etalon percentage per THz
 MAX_ETALON_STEP = 10
 
 
@@ -251,27 +250,36 @@ class Solstis():
                       lock_engage_threshold=LOCK_ENGAGE_THRESHOLD,
                       gain_etalon=GAIN_ETALON, max_etalon_step=MAX_ETALON_STEP):
         """
-        Uses tune_etalon to coarsely set the frequency before engaging the etalon lock. Will time out
+        Uses tune_etalon to coarsely set the frequency before engaging the etalon lock. Exit conditions include (1) successful lock or
+        (2) timing out after lock fails or rails. Outputs a message string for debugging.
         Parameters:
             target_frequency ~ in THz (float), typically read from wavemeter.
             wavemeter ~ object that handles reading the wavemeter.
             frequency_diff_threshold ~ in THz (float). Specifies the threshold for a successful lock.
             timeout ~ in seconds (float), after which software_lock will stop trying.
-            etalon_step_size ~ percentage (float).
             wavemeter_refresh ~ in seconds (float) to give wavemeter time to update its reading.
             relock_interval ~ in seconds (float). Returns error if software lock is too frequently engaged.
+            log_filename ~ (path or str) to .csv log file
+            etalon_diff_threshold ~ (float) minimum threshold to distinguish whether etalon voltage reading and internal memory of
+                etalon position differs significantly. This can occur if a human interacts with the TiSa via GUI.
+            lock_engage_threshold ~ (float) maximum difference tolerated to consider lock successful.
+            gain_etalon ~ (float) etalon percentage per THz. Can be calibrated by scanning the etalon and recording the linear change in frequency.
+                Make sure to set the gain sign correctly!
+            max_etalon_step ~ (float) etalon percentage. Limits the change in etalon position.
         Returns:
         A tuple of
             lock_achieved ~ (bool)
-            message ~ (str)
+            message ~ (str) Returns empty string if lock is successful and not engaging within relock interval time.
         """
         # sometimes the TiSa will jump back to its happy place by unlocking and relocking
         self.etalon_lock(False)
         sleep(wavemeter_refresh)
         self.etalon_lock(True)
         if self.last_relock_time is not None and (perf_counter() - self.last_relock_time) < relock_interval:
-            return False, 'Software lock has engaged twice in ' + str(relock_interval / 60) + ' minutes.'
-
+            debugging_message = 'Software lock has engaged twice in ' + \
+                str(relock_interval / 60) + ' minutes.'
+        else:
+            debugging_message = ''
         current_frequency = wavemeter.GetFrequency()
         t_start = perf_counter()
         while abs(current_frequency - target_frequency) > frequency_diff_threshold:
@@ -290,7 +298,8 @@ class Solstis():
                 # etalon tuning parameter is typically increased to decrease the frequency
                 etalon_sign = np.sign(current_frequency - target_frequency)
                 print('current frequency (THz): ' + str(current_frequency))
-                etalon_increment = min(10, gain_etalon * abs(current_frequency - target_frequency))
+                etalon_increment = min(
+                    10, gain_etalon * abs(current_frequency - target_frequency))
                 new_etalon_setting = self.etalon_setting + etalon_sign * etalon_increment
                 print('\ntrying etalon_tune: ' + str(new_etalon_setting))
                 if new_etalon_setting < 0.1 or new_etalon_setting > 99.9:
@@ -305,12 +314,12 @@ class Solstis():
                         thresh=str(lock_engage_threshold)))
                     self.etalon_lock(True)
                 with open(log_filename, 'a') as f:
-                    f.write('{timestamp}, {etalon}, {freq}'.format(timestamp=str(datetime.datetime.now()),
-                                                                   etalon=str(new_etalon_setting), freq=str(current_frequency)))
+                    f.write('{timestamp}, {etalon}, {freq}\n'.format(timestamp=str(datetime.datetime.now()),
+                                                                     etalon=str(new_etalon_setting), freq=str(current_frequency)))
             else:
                 return False, 'Invalid wavemeter reading. Is the wavemeter underexposed?'
 
-        return True, 'TiSa software lock successful! Hooray.'
+        return True, debugging_message
 
 
 # THE SECTION BELOW CURRENTLY DOES NOT TUNE THE TARGET LAMBDA
