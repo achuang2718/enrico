@@ -24,6 +24,7 @@ LOG_FILENAME = 'tisa_softlock.csv'
 ETALON_DIFF_THRESHOLD = 1  # percentage
 LOCK_ENGAGE_THRESHOLD = 10e-3  # THz
 GAIN_ETALON = 8 / 30e-3
+MAX_ETALON_STEP = 10
 
 
 class SolstisError(Exception):
@@ -245,11 +246,10 @@ class Solstis():
         return inferred_setting  # percent
 
     def software_lock(self, target_frequency, wavemeter, frequency_diff_threshold=500e-6, timeout=SOFTWARE_LOCK_TIMEOUT,
-                      etalon_step_size=ETALON_STEP_SIZE,
                       wavemeter_refresh=WAVEMETER_REFRESH_TIME, relock_interval=MIN_RELOCK_INTERVAL,
                       log_filename=LOG_FILENAME, etalon_diff_threshold=ETALON_DIFF_THRESHOLD,
                       lock_engage_threshold=LOCK_ENGAGE_THRESHOLD,
-                      gain_etalon: GAIN_ETALON):
+                      gain_etalon=GAIN_ETALON, max_etalon_step=MAX_ETALON_STEP):
         """
         Uses tune_etalon to coarsely set the frequency before engaging the etalon lock. Will time out
         Parameters:
@@ -290,10 +290,9 @@ class Solstis():
                 # etalon tuning parameter is typically increased to decrease the frequency
                 etalon_sign = np.sign(current_frequency - target_frequency)
                 print('current frequency (THz): ' + str(current_frequency))
-                new_etalon_setting = self.etalon_setting + etalon_sign * \
-                    gain_etalon * abs(current_frequency - target_frequency)
+                etalon_increment = min(10, gain_etalon * abs(current_frequency - target_frequency))
+                new_etalon_setting = self.etalon_setting + etalon_sign * etalon_increment
                 print('\ntrying etalon_tune: ' + str(new_etalon_setting))
-                input('continue?')
                 if new_etalon_setting < 0.1 or new_etalon_setting > 99.9:
                     return False, 'Etalon railed.'  # software lock fails if etalon rails
                 elif elapsed_time > timeout:
