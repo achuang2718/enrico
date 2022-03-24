@@ -250,7 +250,7 @@ class ImageWatchdog():
                 warning = 'Failed to write {files} to breadboard run_id {id}.'.format(
                     files=str(output_filenames), id=str(run_id))
                 warnings.warn(warning)
-                logger.warning(warning)
+                self.logger.warning(warning)
             matched_to_run_id = True
         return matched_to_run_id
 
