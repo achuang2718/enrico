@@ -43,6 +43,7 @@ class ImageWatchdog():
         self.min_time_diff_in_sec = min_time_diff_in_sec
         self.idle_message_sent = False
         self.max_idle_time = max_idle_time
+        self.run_id_offset = 0
 
     def init_logger(self):
         '''A debugging log is created in the MM/YYMMDD with info to manually associate files that failed to match.'''
@@ -120,6 +121,11 @@ class ImageWatchdog():
         return new_images_bool
 
     def update_run_dict(self, MAX_RETRIES=10):
+        """
+        Optional args:
+            run_id_offset ~ see utility_functions.py. Pass in -1 since for short sequences, 
+            the newest run_id may be +1 ahead of the image(s) waiting to be matched.
+        """
         try_counter = 0
         success = False
         while try_counter < MAX_RETRIES:
@@ -131,9 +137,9 @@ class ImageWatchdog():
                     if try_counter > 1:
                         print('Retrying to get newest breadboard entry. Tries: {n}'.format(
                             n=str(try_counter)))
-                    new_run_dict = utility_functions.get_newest_run_dict(bc)
+                    new_run_dict = utility_functions.get_newest_run_dict(bc, run_id_offset=self.run_id_offset)
                     new_id = new_run_dict['run_id']
-                    if self.newest_run_dict['run_id'] < new_id:
+                    if self.newest_run_dict['run_id'] != new_id:
                         print('new id: {id}'.format(id=str(new_id)))
                         print('list bound variables: {run_dict}'.format(run_dict={key: new_run_dict[key]
                                                                                   for key in new_run_dict['ListBoundVariables']}))
@@ -201,8 +207,6 @@ class ImageWatchdog():
         return output_filenames
 
     def match_images_to_run_id(self, MAX_RETRIES=5):
-        print('here')
-
         def check_run_image_concurrent(self):
             max_time_diff_in_sec = self.max_time_diff_in_sec
             min_time_diff_in_sec = self.min_time_diff_in_sec
@@ -215,7 +219,14 @@ class ImageWatchdog():
                 time_diff=str(time_diff.total_seconds())))
             if min_time_diff_in_sec < time_diff.total_seconds() < max_time_diff_in_sec:
                 return True
-            else:
+            elif time_diff.total_seconds() < min_time_diff_in_sec:
+                #time_diff.total_seconds() < min_time_diff_in_sec typically only for short sequences, where the image
+                #being matched is one id *behind* the newest run_id on breadboard. 
+                self.run_id_offset += -1
+                self.update_run_dict()
+                return False
+            elif time_diff.total_seconds() > min_time_diff_in_sec:
+                self.run_id_offset = 0
                 self.update_run_dict()
                 return False
 
@@ -246,12 +257,14 @@ class ImageWatchdog():
                 else:
                     self.logger.debug('Uploaded filenames {files} to breadboard run_id {id}.'.format(
                         files=str(output_filenames), id=str(run_id)))
-            except:
+            except Exception as e:
+                print(e)
                 warning = 'Failed to write {files} to breadboard run_id {id}.'.format(
                     files=str(output_filenames), id=str(run_id))
                 warnings.warn(warning)
                 self.logger.warning(warning)
             matched_to_run_id = True
+        self.run_id_offset = min(self.run_id_offset, 0)
         return matched_to_run_id
 
     def check_idle_time(self):
@@ -269,10 +282,10 @@ class ImageWatchdog():
     def main(self):
         while True:
             try:
-                self.update_run_dict()  # fetch newest run info from breadboard
                 self.check_idle_time()  # fire Slack message if experiment is idling
                 new_images_bool = self.monitor_watchfolder()
                 if new_images_bool:
+                    self.update_run_dict()  # fetch newest run info from breadboard
                     self.match_images_to_run_id()  # this method contains all the safety checks and logic
                     # for matching run_id to images and writing image and run names to breadboard.
                 time.sleep(self.refresh_time)
