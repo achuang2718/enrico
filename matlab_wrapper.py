@@ -101,8 +101,8 @@ def getDualImagingAnalysis(eng, filepath,
 
 #triple_imaging_analyzed_var_names = ['K1_bareNcntAverageMarqueeBoxValues', 'K2_bareNcntAverageMarqueeBoxValues', 'Na_bareNcntAverageMarqueeBoxValues',
 #                                     'Na_COMX', 'Na_COMY']
-triple_imaging_analyzed_var_names = ['K1_NcntLarge', 'K1_NcntSmall', 'K1_COMX', 'K1_COMY','K1_squared_KGaussianWidthX','K1_squared_KGaussianWidthY','K1_squared_widthRatioYoverX','K1_KcountsPerArea', 
-                                    'K2_NcntLarge', 'K2_NcntSmall', 'K2_COMX', 'K2_COMY','K2_squared_KGaussianWidthX','K2_squared_KGaussianWidthY','K2_squared_widthRatioYoverX','K2_KcountsPerArea', 
+triple_imaging_analyzed_var_names = ['K1_NcntLarge', 'K1_NcntSmall', 'K1_COMX', 'K1_COMY','K1_KGaussianWidthX','K1_KGaussianWidthY','K1_widthRatioYoverX','K1_KcountsPerArea', 
+                                    'K2_NcntLarge', 'K2_NcntSmall', 'K2_COMX', 'K2_COMY','K2_KGaussianWidthX','K2_KGaussianWidthY','K2_widthRatioYoverX','K2_KcountsPerArea', 
                                     'K1_transferSmall','K1_transferLarge','K2_transferSmall','K2_transferLarge',
                                    'Na_NcntSmall','Na_TFy','Na_TFx','Na_COMX', 'Na_COMY', 'Na_NcntLarge']
 
