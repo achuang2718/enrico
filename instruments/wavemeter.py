@@ -42,7 +42,7 @@ WAVEMETER_READ_TIME_OFFSET = 3
 
 STRIKES_YOURE_OUT = 3  # Number of times to allow read to fail before abort
 ALLOWED_FREQUENCY_CHANGE = 0.002
-IDEAL_READING = 389.266  # THz
+IDEAL_READING = 389.253  # THz
 #EXPOSURE_MULTIPLIER = 1.2
 #EXPOSURE_LOWER_RAIL = 1
 #EXPOSURE_UPPER_RAIL = 1000
@@ -103,7 +103,12 @@ def main():
         # listen to breadboard server for new run_id
         try:
             new_run_dict = get_newest_run_dict(bc)
-            new_run_id = new_run_dict['run_id']
+            new_run_id = new_run_dict['run_id']            
+            # breakpoint()
+            if 'WavemeterTargetTHz' in new_run_dict.keys():
+                    IDEAL_READING = new_run_dict['WavemeterTargetTHz']
+                    print('wavemeter lock point: {reading}'.format(
+            reading=str(IDEAL_READING)))              
         except:
             logger.error(sys.exc_info()[1])
             pass
