@@ -12,7 +12,7 @@ DEFAULT_SERVER_IP = '192.168.1.222'  # of TiSa
 DEFAULT_PORT = 39933
 DEFAULT_TIMEOUT = 5
 DEFAULT_TRANSMISSION_ID = 1
-DEFAULT_CLIENT_IP = '192.168.1.4'  # currently set for the analysis PC
+DEFAULT_CLIENT_IP = '192.168.1.6'  # currently set for the analysis PC
 print('Remember to set CONFIGURE -> NETWORK SETTINGS -> REMOTE INTERFACE in the web interface to match the client IP.')
 DEBUG_MODE = False
 WAVEMETER_REFRESH_TIME = 2
@@ -262,7 +262,8 @@ class Solstis():
             log_filename ~ (path or str) to .csv log file
             etalon_diff_threshold ~ (float) minimum threshold to distinguish whether etalon voltage reading and internal memory of
                 etalon position differs significantly. This can occur if a human interacts with the TiSa via GUI.
-            lock_engage_threshold ~ (float) maximum difference tolerated to consider lock successful.
+            lock_engage_threshold ~ (float) maximum difference tolerated to consider engage etalon lock, otherwise etalon
+            tunes freely without locking.
             gain_etalon ~ (float) etalon percentage per THz. Can be calibrated by scanning the etalon and recording the linear change in frequency.
                 Make sure to set the gain sign correctly!
             max_etalon_step ~ (float) etalon percentage. Limits the change in etalon position.
@@ -299,7 +300,9 @@ class Solstis():
                 etalon_sign = np.sign(current_frequency - target_frequency)
                 print('current frequency (THz): ' + str(current_frequency))
                 etalon_increment = min(
-                    10, gain_etalon * abs(current_frequency - target_frequency))
+                    2, gain_etalon * abs(current_frequency - target_frequency))
+                print('etalon increment: ')
+                print(etalon_increment)
                 new_etalon_setting = self.etalon_setting + etalon_sign * etalon_increment
                 print('\ntrying etalon_tune: ' + str(new_etalon_setting))
                 if new_etalon_setting < 0.1 or new_etalon_setting > 99.9:

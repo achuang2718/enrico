@@ -41,8 +41,8 @@ wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=10)
 WAVEMETER_READ_TIME_OFFSET = 3
 
 STRIKES_YOURE_OUT = 3  # Number of times to allow read to fail before abort
-ALLOWED_FREQUENCY_CHANGE = 0.002
-IDEAL_READING = 389.253  # THz
+ALLOWED_FREQUENCY_CHANGE = 0.5e-3 #THz
+IDEAL_READING = 372.553 # THz, used to be 389.253THz for K D1 Raman shelving
 #EXPOSURE_MULTIPLIER = 1.2
 #EXPOSURE_LOWER_RAIL = 1
 #EXPOSURE_UPPER_RAIL = 1000
@@ -108,7 +108,11 @@ def main():
             if 'WavemeterTargetTHz' in new_run_dict.keys():
                     IDEAL_READING = new_run_dict['WavemeterTargetTHz']
                     print('wavemeter lock point: {reading}'.format(
-            reading=str(IDEAL_READING)))              
+            reading=str(IDEAL_READING)))   
+            if 'WavemeterLockWidthGHz' in new_run_dict.keys():
+                    ALLOWED_FREQUENCY_CHANGE = new_run_dict['WavemeterLockWidthGHz']*1e-3
+                    print('wavemeter lock allowed lock width GHz: {reading}'.format(
+            reading=str(ALLOWED_FREQUENCY_CHANGE*1e3)))             
         except:
             logger.error(sys.exc_info()[1])
             pass
@@ -158,7 +162,7 @@ def main():
                 wavemeter_status_monitor.warn_on_slack('TiSa software lock engaging, setpoint {pt}THz'.format(pt
                     =str(IDEAL_READING)))
                 lock_success, debugging_message = my_tisa.software_lock(
-                    IDEAL_READING, wlm)
+                    IDEAL_READING, wlm, frequency_diff_threshold = ALLOWED_FREQUENCY_CHANGE, lock_engage_threshold= ALLOWED_FREQUENCY_CHANGE)
             except Exception as e:
                 lock_success, debugging_message = False, '<@{id}>'.format(
                     id=alex_chuang_id) + 'software lock runtime error: ' + str(e)
