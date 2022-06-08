@@ -265,7 +265,7 @@ class AnalysisLogger():
         self.done_ids += popped_id
 
         if resp.status_code != 200:
-            logger.warning('Upload error: ' + resp.text)
+            self.logger.warning('Upload error: ' + resp.text)
 
         if not self.save_images:  # delete images and add run_ids to .txt file after analysis if in testing mode
             print('Not saving images.')
@@ -320,14 +320,13 @@ class AnalysisLogger():
             if len(self.unanalyzed_ids) > 0:
                 try:
                     self.analyze_newest_images()
-                except JSONDecodeError:
+                    if export_idx % export_threshold_int == 0:
+                        self.export_params_csv()
+                except JSONDecodeError as e:
                     print('JSONDecodeError encountered. Trying again later.')
                 # self.dump()
             time.sleep(self.refresh_time)
-            if export_idx % export_threshold_int == 0:
-                self.export_params_csv()
-
-    
+            
 
     def crash_messsage(self):
         warning_message = '{folder} analysis crashed: '.format(folder=watchfolder) + 'Error: {}. {}, line: {}'.format(sys.exc_info()[0],
@@ -352,3 +351,7 @@ if __name__ == '__main__':
         analysis_logger.main()
     except KeyboardInterrupt:
         analysis_logger.export_params_csv()
+    except Exception as e:
+        print(e)
+        print('\n\n LEAVE THIS WINDOW OPEN FOR DEBUGGING PURPOSES! \n\n')
+        breakpoint()
