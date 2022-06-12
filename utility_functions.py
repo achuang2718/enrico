@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def fancy_plot(x, y, fmt='', ax = None, **kwargs):
+def fancy_plot(x, y, fmt='', ax=None, **kwargs):
     """Wraps around matplotlib.pyplot (aliased to plt) with last-point highlighting and statistics
 
     Plots x and y as in plt.plot, but a) averages together y-values with the same x-value and calculates and plots 
@@ -103,10 +103,11 @@ def fancy_plot(x, y, fmt='', ax = None, **kwargs):
     ax: A matplotlib.pyplot.Axes instance attached to figure; this is what does the actual plotting
 """
 
-def initialize_live_plot(num = None, can_make_interactive = True):
+
+def initialize_live_plot(num=None, can_make_interactive=True):
     if(can_make_interactive and not plt.isinteractive()):
-        plt.ion() 
-    fig = plt.figure(num = num) 
+        plt.ion()
+    fig = plt.figure(num=num)
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
     return (fig, ax)
 
@@ -125,30 +126,23 @@ def initialize_live_plot(num = None, can_make_interactive = True):
     clear_previous: Whether to clear the previous curves off of the live plot when a new one is plotted. Default True. 
     keep_settings: Whether axis settings (e.g. log scale, labels, etc.) are kept when the data is cleared. Default True.
 """
-def update_live_plot(x, y, fmt = '', ax = None, fancy = False, clear_previous = True, keep_settings = True, pause_length = 0.001, **kwargs):
+
+
+def update_live_plot(x, y, fmt='', ax=None, fancy=False, clear_previous=True, keep_settings=True, pause_length=0.001, **kwargs):
     if(ax == None):
-        ax = plt.gca() 
+        ax = plt.gca()
     if(clear_previous):
         if(keep_settings):
             for artist in ax.lines + ax.collections:
-                artist.remove() 
+                artist.remove()
         else:
             ax.clear()
     if(fancy):
-        fancy_plot(x, y, fmt = fmt, ax = ax, **kwargs)
+        fancy_plot(x, y, fmt=fmt, ax=ax, **kwargs)
     else:
-        ax.plot(x, y, fmt, **kwargs) 
+        ax.plot(x, y, fmt, **kwargs)
     plt.draw()
     plt.pause(pause_length)
-    
-    
-
-    
-
-
-
-
-
 
 
 def load_breadboard_client():
@@ -216,17 +210,17 @@ def get_newest_run_dict(bc, max_retries=10, run_id_offset=0):
                           **new_run_dict['parameters']}
     return new_run_dict_clean
 
-def get_newest_value(bc, key, max_tries_this_level = 6, delay_seconds = 5):
+
+def get_newest_value(bc, key, max_tries_this_level=6, delay_seconds=5):
     tries = 0
     while (tries < max_tries_this_level):
         newest_run_dict = get_newest_run_dict(bc)
         if(key in newest_run_dict):
-            return newest_run_dict[key] 
+            return newest_run_dict[key]
         else:
-            time.sleep(delay_seconds) 
+            time.sleep(delay_seconds)
             tries += 1
     return None
-        
 
 
 def time_diff_in_sec(runtime_str, trigger_time):
@@ -260,6 +254,7 @@ def load_analysis_path():
     with open(os.path.join(os.path.dirname(__file__), "analysis_config.json")) as my_file:
         analysis_paths = json.load(my_file)
     return analysis_paths
+
 
 def get_newest_df(watchfolder, optional_column_names=[], existing_df=None):
     """Returns a dataframe constructed by getting data from breadboard for run_ids parsed from watchfolder directory.
@@ -298,7 +293,7 @@ def get_newest_df(watchfolder, optional_column_names=[], existing_df=None):
 
     def custom_sort(df):
         # takes in df and returns same df with user-interaction columns first
-        #['run_id','badshot','manual_foo1','manual_foo2', 'listboundvar1', etc.]
+        # ['run_id','badshot','manual_foo1','manual_foo2', 'listboundvar1', etc.]
         cols = list(df.columns)
         manual_cols = []
         for col in cols:
@@ -313,3 +308,41 @@ def get_newest_df(watchfolder, optional_column_names=[], existing_df=None):
     df = custom_sort(df)
     df.sort_values(by='run_id', ascending=False, inplace=True)
     return df
+
+
+def delete_misplaced_images(free_space_threshold=200):
+    import shutil
+    from pathlib import Path
+    my_filepath = Path(__file__)
+    # assumes local images are stored on same partition as enrico repo
+    stat = shutil.disk_usage(my_filepath)
+    if stat.free/1024**3 < free_space_threshold:
+        print('total (GB): ' + str(stat.total/1024**3))
+        print('free (GB): ' + str(stat.free/1024**3))
+
+        print('Finding folders containing misplaced images...')
+        cwd = Path.cwd()
+        path_found = False
+        for path in cwd.glob('**/*misplaced*'):
+            if path.is_dir():
+                print(path)
+                path_found = True
+        if not path_found:
+            print('No folders found, goodbye!')
+            return None
+
+        my_input = input(
+            'WARNING! THIS WILL PERMANENTLY DELETE ALL IMAGES IN LISTED FOLDERS! TO EXECUTE, TYPE continue: ')
+        if my_input == 'continue':
+            print('deleting misplaced images...')
+            for path in cwd.glob('**/*misplaced*'):
+                if path.is_dir():
+                    print('Deleting files in ' + str(path) + '...')
+                    shutil.rmtree(path)
+        else:
+            print('operation aborted.')
+
+        breakpoint()
+
+
+delete_misplaced_images()
