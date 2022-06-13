@@ -1,3 +1,9 @@
+import json
+from pathlib import Path
+import logging
+import enrico_bot
+from measurement_directory import measurement_directory, todays_measurements
+import warnings
 import os
 import time
 import datetime
@@ -6,11 +12,6 @@ import sys
 from utility_functions import load_breadboard_client, load_bec1serverpath
 import utility_functions
 bc = load_breadboard_client()
-import warnings
-from measurement_directory import measurement_directory, todays_measurements
-import enrico_bot
-import logging
-from pathlib import Path
 
 
 class ImageWatchdog():
@@ -37,6 +38,7 @@ class ImageWatchdog():
         self.backup_to_bec1server = backup_to_bec1server
         if self.backup_to_bec1server:
             self.set_bec1serverpath()
+        self.set_local_backup_path()
         self.incomingfile_time = datetime.datetime.now()
         self.newest_run_dict = {'run_id': 0}
         self.max_time_diff_in_sec = max_time_diff_in_sec
@@ -93,6 +95,7 @@ class ImageWatchdog():
         self.bec1serverpath = load_bec1serverpath()
         measurement_backup_path = os.path.join(
             self.bec1serverpath, self.runfolder)
+        # see set_local_backup_path for a cleaner implementation of the following block
         dummy_path = measurement_backup_path
         dummy_paths = []
         subfolder_depth = 3  # monthdir/daydir/rundir
@@ -103,6 +106,23 @@ class ImageWatchdog():
             if not os.path.exists(path):
                 print('creating {path} on bec1server.'.format(path=path))
                 os.mkdir(path)
+
+    def set_local_backup_path(self):
+        """
+        Overwrites self.runfolder to be relative to the local backup path, if specified in .json config file. 
+        For use with e.g. external hard drives.
+        """
+        with open(os.path.join(os.path.dirname(__file__), "bec1server_config.json")) as my_file:
+            path_dict = json.load(my_file)
+            if 'local_backup_path' not in path_dict:
+                print('No local backup path found in bec1server_config.json.')
+                return None
+            local_backup_path = Path(path_dict.get("local_backup_path"))
+        measurement_backup_path = local_backup_path / Path(self.runfolder)
+        measurement_backup_path.mkdir(parents=True, exist_ok=True)
+        # set as string since some of this module uses os.path
+        self.runfolder = str(measurement_backup_path)
+        print('Local backup directory: ' + self.runfolder)
 
     def monitor_watchfolder(self):
         filenames, paths = self.getFileList()
@@ -137,7 +157,8 @@ class ImageWatchdog():
                     if try_counter > 1:
                         print('Retrying to get newest breadboard entry. Tries: {n}'.format(
                             n=str(try_counter)))
-                    new_run_dict = utility_functions.get_newest_run_dict(bc, run_id_offset=self.run_id_offset)
+                    new_run_dict = utility_functions.get_newest_run_dict(
+                        bc, run_id_offset=self.run_id_offset)
                     new_id = new_run_dict['run_id']
                     if self.newest_run_dict['run_id'] != new_id:
                         print('new id: {id}'.format(id=str(new_id)))
@@ -220,8 +241,8 @@ class ImageWatchdog():
             if min_time_diff_in_sec < time_diff.total_seconds() < max_time_diff_in_sec:
                 return True
             elif time_diff.total_seconds() < min_time_diff_in_sec:
-                #time_diff.total_seconds() < min_time_diff_in_sec typically only for short sequences, where the image
-                #being matched is one id *behind* the newest run_id on breadboard. 
+                # time_diff.total_seconds() < min_time_diff_in_sec typically only for short sequences, where the image
+                # being matched is one id *behind* the newest run_id on breadboard.
                 self.run_id_offset += -1
                 self.update_run_dict()
                 return False
@@ -299,7 +320,7 @@ class ImageWatchdog():
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         watchdog = ImageWatchdog()
-        #for quick switching between dual and triple imaging
+        # for quick switching between dual and triple imaging
         # n_images = int(input('Enter number of image files per shot: '))
         # watchdog.main(num_images_per_shot=n_images)
         watchdog.main()
