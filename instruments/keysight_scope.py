@@ -10,6 +10,7 @@ import time
 import parse
 import matplotlib.pyplot as plt
 import datetime
+import sys
 
 def load_scopeconfig():
     import json
@@ -104,7 +105,7 @@ class Oscilloscope():
         if NUMBER_CHANNELS_ON == 0:
             scope_obj.clear()
             scope_obj.close()
-            sys.exit("No data has been acquired. Properly closing scope and aborting script.")
+            raise  ValueError('No data acquired.')
 
         ############################################
         # Find first channel on (as needed/desired)
@@ -452,7 +453,8 @@ class LockDetector(StatusMonitor):
                     if 'lock_discriminator' in self.lock_channels[chl_idx].keys():
                         locked_bool = self.lock_channels[chl_idx]['lock_discriminator'](lock_trace)
                         if not locked_bool:
-                            pass #for future, we could add bot notifications here
+                            msg = (self.lock_channels[chl_idx]['name'] + ' unlocked.')
+                            self.warn_on_slack(msg)
                     _, unit = parse.parse('{}_in_{}', column_name)
                     lock_dict.update({'{name}min_in_{unit}'.format(name=name, unit=unit): np.min(lock_trace),
                                  '{name}max_in_{unit}'.format(name=name, unit=unit): np.max(lock_trace),
