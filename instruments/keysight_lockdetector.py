@@ -32,19 +32,20 @@ def load_channel_names(SCOPE_NAME):
     return lock_channels
 lock_channels = load_channel_names(SCOPE_NAME)
 
-THRESHOLD, CHL_IDX = 1000, 1
-my_test_discriminator = lambda trace: np.mean(trace) > THRESHOLD 
-lock_channels[CHL_IDX]['lock_discriminator'] = my_test_discriminator
+THRESHOLD, CHL_IDX = 0.1, 1
+upleg_discriminator = lambda trace: np.mean(trace) > THRESHOLD 
+lock_channels[CHL_IDX]['lock_discriminator'] = upleg_discriminator
 
+THRESHOLD, CHL_IDX = .2, 2
+downleg_discriminator = lambda trace: np.mean(trace) > THRESHOLD 
+lock_channels[CHL_IDX]['lock_discriminator'] = downleg_discriminator
 
-# scope = Oscilloscope(visa_address=scope_visa_addresses[SCOPE_NAME])
-# print(scope.acquire_traces())
-# scope.close()
-lockdetector = LockDetector(visa_address=scope_visa_addresses[SCOPE_NAME],
+lockdetector_laser_table = LockDetector(visa_address=scope_visa_addresses[SCOPE_NAME],
                             lock_channels=lock_channels)
+
 if __name__ == '__main__':
     try:
-        lockdetector.main()
+        lockdetector_laser_table.main()
     except:
         enrico_bot.post_message('restart keysight_lockdetector.py' + sys.exc_info()[1])
 
