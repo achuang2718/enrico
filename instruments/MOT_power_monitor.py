@@ -6,7 +6,7 @@ import time
 
 class MOTPowerMonitor(StatusMonitor):
     def __init__(self, refresh_time = 5, **kwargs):
-        super().__init__(self, **kwargs)
+        StatusMonitor.__init__(self, **kwargs)
         self.scope = Picoscope(0, serial='IW968/0159', verbose=True)
         #TODO: import scope   instead of hardcoding here
         self.channel_dict = {
@@ -24,8 +24,8 @@ class MOTPowerMonitor(StatusMonitor):
     def _configure_picoscope(self, scope):
         for chl_idx, params in self.channel_dict.items():
             scope.setup_channel(chl_idx, channel_range_mv=params['channel_range_mv'])
-        scope.setup_trigger('A', trigger_threshold_mv=1500)
-        scope.setup_block(block_size=100000, block_duration=1, pre_trigger_percent=0)
+        scope.setup_trigger('A', trigger_threshold_mv=500)
+        scope.setup_block(block_size=100000, block_duration=0.5, pre_trigger_percent=0)
 
     def main(self):
         with self.scope as scope:
@@ -37,12 +37,14 @@ class MOTPowerMonitor(StatusMonitor):
                 mot_power_dict = {}
                 for chl_idx, params in self.channel_dict.items():
                     label = params['channel_label']
+                    if label == 'Trigger':
+                        continue
                     trace = scope_traces[chl_idx]
-                    mot_power_dict.update({f'{label}mean_in_mv': np.mean(trace),
-                                        f'{label}std_in_mv': np.std(trace)})
+                    mot_power_dict.update({f'mock_{label}_mean_in_mv': np.mean(trace),
+                                        f'mock_{label}_std_in_mv': np.std(trace)})
 
                 self.append_to_backlog(mot_power_dict, time_now=time_now)
-                self.upload_to_breadboard()
+                self.upload_to_breadboard() 
                 time.sleep(self.refresh_time)
                 print('\n\n')
 

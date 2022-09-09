@@ -39,7 +39,18 @@ class Picoscope:
             else:
                 raise e
             assert_pico_ok(status)
-        
+
+        self.ps4000a_channel = {
+            "PS4000A_CHANNEL_A" : 0,
+            "PS4000A_CHANNEL_B" : 1,
+            "PS4000A_CHANNEL_C" : 2,
+            "PS4000A_CHANNEL_D" : 3,
+            "PS4000A_CHANNEL_E" : 4,
+            "PS4000A_CHANNEL_F" : 5,
+            "PS4000A_CHANNEL_G" : 6 ,
+            "PS4000A_CHANNEL_H" : 7,
+        }
+
         self.buffers = {}
         self.active_channels = []
         #channel voltage range index as defined in ps4000a.py
@@ -114,7 +125,7 @@ class Picoscope:
         # range = PS4000a_2V = 7
         # analogOffset = 0 V
         status = ps.ps4000aSetChannel(self.c_handle,
-                                      ps.PS4000A_CHANNEL['PS4000A_CHANNEL_' +
+                                      self.ps4000a_channel['PS4000A_CHANNEL_' +
                                                          channel_name],
                                       1,
                                       coupling_DC,
@@ -163,7 +174,7 @@ class Picoscope:
         # auto Trigger = 1000 ms           
         status = ps.ps4000aSetSimpleTrigger(self.c_handle,
                                             1,
-                                            ps.PS4000A_CHANNEL['PS4000A_CHANNEL_' +
+                                            self.ps4000a_channel['PS4000A_CHANNEL_' +
                                                                 source_channel_name],
                                             trigger_threshold,
                                             trigger_direction,
@@ -242,7 +253,7 @@ class Picoscope:
         for channel in self.active_channels:
             self.buffers[channel] = (ctypes.c_int16 * self.block_size)()
             status = ps.ps4000aSetDataBuffers(self.c_handle,
-                                            ps.PS4000A_CHANNEL['PS4000A_CHANNEL_' +
+                                            self.ps4000a_channel['PS4000A_CHANNEL_' +
                                                                 channel],
                                             ctypes.byref(self.buffers[channel]),
                                             None,
