@@ -11,7 +11,7 @@ class MOTPowerMonitor(StatusMonitor):
         #TODO: import scope   instead of hardcoding here
         self.channel_dict = {
             'A': {'channel_label': 'Trigger','channel_range_mv': 2000},            
-            'B': {'channel_label': 'NaMOT_Top','channel_range_mv': 1000},
+            'B': {'channel_label': 'NaMOT_Top','channel_range_mv': 5000},
             'C': {'channel_label': 'NaMOT_Bottom','channel_range_mv': 2000},
             'D': {'channel_label': 'NaMOT_KSlowerWindow','channel_range_mv': 500},
             'E': {'channel_label': 'NaMOT_KSlower','channel_range_mv': 2000},
@@ -44,6 +44,8 @@ class MOTPowerMonitor(StatusMonitor):
                                         f'{label}_std_in_mv': np.std(trace)})
 
                 self.append_to_backlog(mot_power_dict, time_now=time_now)
+                #hot fix sleep
+                time.sleep(5)
                 self.upload_to_breadboard() 
                 time.sleep(self.refresh_time)
                 print('\n\n')
