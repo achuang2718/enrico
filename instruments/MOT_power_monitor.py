@@ -3,6 +3,7 @@ from ps4824a_wrapper_blockmode_utils import Picoscope
 from status_monitor import StatusMonitor
 import datetime
 import time
+from utility_functions import get_newest_run_dict, time_diff_in_sec
 
 class MOTPowerMonitor(StatusMonitor):
     def __init__(self, refresh_time = 5, **kwargs):
@@ -26,6 +27,49 @@ class MOTPowerMonitor(StatusMonitor):
             scope.setup_channel(chl_idx, channel_range_mv=params['channel_range_mv'])
         scope.setup_trigger('B', trigger_threshold_mv=200)
         scope.setup_block(block_size=100000, block_duration=1, pre_trigger_percent=0)
+    
+    def upload_to_breadboard(self):
+        # matches backlog times to run_id times and writes (but not overwrites) closest log entry to breadboard
+        try:
+            run_dict = get_newest_run_dict(self.bc)
+        except:
+            print(traceback.format_exc())
+        new_run_id = run_dict['run_id']
+        time_diffs = np.array([time_diff_in_sec(
+            run_dict['runtime'], backlog_time) for backlog_time in self.backlog])
+        time_diffs[time_diffs < self.read_run_time_offset] = -np.infty
+        min_idx = np.argmin(np.abs(time_diffs - self.read_run_time_offset))
+        min_time_diff_from_ideal = (time_diffs[min_idx] -
+                                    self.read_run_time_offset)
+        if np.abs(min_time_diff_from_ideal) < self.max_time_diff_tolerance:
+            print("Newest breadboard run_id {id} at time: ".format(id=str(run_dict['run_id']))
+                  + str(run_dict['runtime']))
+            closest_backlog_time = list(
+                self.backlog.keys())[min_idx]
+            dict_to_upload = self.backlog[closest_backlog_time]
+            readout_exists_on_breadboard = False
+            for value_name in dict_to_upload.keys():
+                if value_name in run_dict:
+                    readout_exists_on_breadboard = True
+                    # print('{name} already exists for run_id {id} on breadboard.'.format(name=value_name,id=run_dict['run_id']))
+            if not readout_exists_on_breadboard:
+                resp = self.bc.add_instrument_readout_to_run(
+                    new_run_id, dict_to_upload)
+                if resp.status_code != 200:
+                    warning_text = ('Error uploading {dict_to_upload} from {time_str} to run_id {id}. Error text: '.format(dict_to_upload=str(dict_to_upload),
+                                                                                                                           reading=str(
+                                                                                                                               value_to_upload),
+                                                                                                                           time_str=str(
+                                                                                                                               closest_backlog_time),
+                                                                                                                           id=str(
+                                                                                                                               new_run_id)
+                                                                                                                           ) + resp.text)
+                    self.warn_on_slack(warning_text)
+        else:
+            warning_text = 'Time difference {diff} sec between reading and latest breadboard entry exceeds max tolerance of {tol} sec. Check breadboard-cicero-client.'.format(
+                diff=str(np.abs(min_time_diff_from_ideal)), tol=str(self.max_time_diff_tolerance))
+            if np.abs(min_time_diff_from_ideal) != np.inf:
+                self.warn_on_slack(warning_text)
 
     def main(self):
         with self.scope as scope:
