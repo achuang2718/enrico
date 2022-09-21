@@ -38,8 +38,8 @@ class MOTPowerMonitor(StatusMonitor):
         time_diffs = np.array([time_diff_in_sec(
             run_dict['runtime'], backlog_time) for backlog_time in self.backlog])
         time_diffs[time_diffs < self.read_run_time_offset] = -np.infty
-        min_idx = np.argmin(np.abs(time_diffs - self.read_run_time_offset))
-        min_time_diff_from_ideal = (time_diffs[min_idx] -
+        min_idx = np.argmin(np.abs(time_diffs + self.read_run_time_offset))
+        min_time_diff_from_ideal = (time_diffs[min_idx] +
                                     self.read_run_time_offset)
         if np.abs(min_time_diff_from_ideal) < self.max_time_diff_tolerance:
             print("Newest breadboard run_id {id} at time: ".format(id=str(run_dict['run_id']))
