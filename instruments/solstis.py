@@ -60,7 +60,7 @@ class Solstis():
         print('Closing connection to TiSa...')
         self.sock.close()
 
-    def _send_msg(self, operation: str, params: dict={}, debug=DEBUG_MODE):
+    def _send_msg(self, operation: str, params: dict = {}, debug=DEBUG_MODE):
         '''
         Function to carry out the most basic communication send function
         transmission_id ~ Arbitrary(?) integer
@@ -122,7 +122,7 @@ class Solstis():
                   '' did not match expected operation command of: ' + operation
             raise SolstisError(msg)
 
-    def _send_and_recv_status(self, operation: str, params: dict={}, debug=DEBUG_MODE, status_nested=True):
+    def _send_and_recv_status(self, operation: str, params: dict = {}, debug=DEBUG_MODE, status_nested=True):
         '''
         Sends and receives status of operation.
         Returns:
@@ -324,6 +324,29 @@ class Solstis():
 
         return True, debugging_message
 
+    def characterize_mode_hops(self, wlm, etalon_range=0.05, num_points=10, refresh_time=WAVEMETER_REFRESH_TIME):
+        for _ in range(5):
+            initial_setting = self._get_etalon_setting()
+            print(initial_setting)
+
+        counter = 0
+        increment_sign = 1
+        etalon_settings, freqs_before_etalon_lock, freqs_after_etalon_lock = [], [], []
+        while counter < num_points:
+            counter += 1
+            etalon_settings.append(
+                self._get_etalon_setting() + increment_sign * 0.01)
+            self.tune_etalon(etalon_settings[-1])
+            sleep(refresh_time)
+            freqs_before_etalon_lock.append(wlm.GetFrequency())
+            self.etalon_lock(True)
+            sleep(refresh_time)
+            freqs_after_etalon_lock.append(wlm.GetFrequency())
+            if abs(etalon_settings[-1] - initial_setting) > etalon_range:
+                increment_sign *= -1
+            print(
+                etalon_settings[-1], freqs_before_etalon_lock[-1], freqs_after_etalon_lock[-1])
+        return etalon_settings, freqs_before_etalon_lock, freqs_after_etalon_lock
 
 # THE SECTION BELOW CURRENTLY DOES NOT TUNE THE TARGET LAMBDA
 ##################################################################################
@@ -349,14 +372,16 @@ class Solstis():
     #         raise SolstisError('Wavelength out of range.')
 ##################################################################################
 
+
 def main():
     from wlm import WavelengthMeter
     my_wlm = WavelengthMeter()
     IDEAL_FREQ = 390.983
     try:
         my_tisa = Solstis()
-        lock_success, lock_message = my_tisa.software_lock(IDEAL_FREQ, my_wlm)
-        print(lock_message)
+        etalon_settings, freqs_before_etalon_lock, freqs_after_etalon_lock = my_tisa.characterize_mode_hops(
+            my_wlm)
+        breakpoint()
     finally:
         my_tisa.__exit__()
 
