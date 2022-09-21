@@ -1,10 +1,10 @@
 ECHO Starting enrico...
 :: activate conda environment
-CD C:\Users\Fermi1-YCAM\anaconda3\Scripts
+CD /d D:\Anaconda3\Scripts
 CALL activate.bat
 CALL conda.bat activate enrico
 
-CD /d C:\Users\Fermi1-YCAM\Documents\Github\enrico\instrument
+CD /d C:\Users\Fermi1\Documents\GitHub\enrico\instruments
 ECHO DID YOU CLOSE THE PREVIOUS INSTANCE OF THE PICOSCOPE?
 PAUSE
 START python MOT_power_monitor.py
