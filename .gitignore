@@ -52,6 +52,6 @@ images/
 
 *dailynb.ipynb
 
-*.png
+.png
 *.csv
 *.spe

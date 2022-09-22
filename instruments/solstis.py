@@ -237,6 +237,9 @@ class Solstis():
             raise SolstisError('etalon_lock Failed; Reason Unknown')
 
     def _get_etalon_setting(self):
+        """
+        Infer the etalon percentage setting from the physical voltage on the etalon. 
+        """
         MAX_ETALON_VOLTAGE = 196.4
         inferred_setting = self.get_status(
         )['etalon_voltage'] / MAX_ETALON_VOLTAGE * 100
@@ -325,31 +328,39 @@ class Solstis():
         return True, debugging_message
 
     def characterize_mode_hops(self, wlm, etalon_range=0.05, num_points=10, refresh_time=WAVEMETER_REFRESH_TIME):
-        for _ in range(5):
-            initial_setting = self._get_etalon_setting()
-            print(initial_setting)
-
+        if self.etalon_setting is None:
+            initial_setting = float(input('Enter the current etalon tune setting (%): '))
+            self.etalon_setting = initial_setting
+        else:
+            initial_setting = self.etalon_setting
         counter = 0
         increment_sign = 1
         etalon_settings, freqs_before_etalon_lock, freqs_after_etalon_lock = [], [], []
         while counter < num_points:
             counter += 1
             etalon_settings.append(
-                self._get_etalon_setting() + increment_sign * 0.01)
+                self.etalon_setting + increment_sign * 0.01)
             self.tune_etalon(etalon_settings[-1])
             sleep(refresh_time)
             freqs_before_etalon_lock.append(wlm.GetFrequency())
             self.etalon_lock(True)
             sleep(refresh_time)
             freqs_after_etalon_lock.append(wlm.GetFrequency())
+            print(abs(etalon_settings[-1] - initial_setting), increment_sign)
             if abs(etalon_settings[-1] - initial_setting) > etalon_range:
                 increment_sign *= -1
+
             print(
                 etalon_settings[-1], freqs_before_etalon_lock[-1], freqs_after_etalon_lock[-1])
+            
             with open('tisa_characterization.log', 'a') as f:
                 f.write('{timestamp}, {etalon}, {freq_before}, {freq_after}\n'.format(timestamp=str(datetime.datetime.now()),
                                                                                       etalon=str(etalon_settings[-1]), freq_before=str(freqs_before_etalon_lock[-1]),
+            
                                                                                       freq_after=freqs_after_etalon_lock[-1]))
+            self.etalon_lock(False)
+            sleep(refresh_time)
+
         return etalon_settings, freqs_before_etalon_lock, freqs_after_etalon_lock
 
 # THE SECTION BELOW CURRENTLY DOES NOT TUNE THE TARGET LAMBDA
@@ -384,8 +395,7 @@ def main():
     try:
         my_tisa = Solstis()
         etalon_settings, freqs_before_etalon_lock, freqs_after_etalon_lock = my_tisa.characterize_mode_hops(
-            my_wlm)
-        breakpoint()
+            my_wlm, etalon_range=1, num_points=2000, refresh_time=1)
     finally:
         my_tisa.__exit__()
 
