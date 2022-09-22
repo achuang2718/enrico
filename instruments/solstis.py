@@ -346,6 +346,10 @@ class Solstis():
                 increment_sign *= -1
             print(
                 etalon_settings[-1], freqs_before_etalon_lock[-1], freqs_after_etalon_lock[-1])
+            with open('tisa_characterization.log', 'a') as f:
+                f.write('{timestamp}, {etalon}, {freq_before}, {freq_after}\n'.format(timestamp=str(datetime.datetime.now()),
+                                                                                      etalon=str(etalon_settings[-1]), freq_before=str(freqs_before_etalon_lock[-1]),
+                                                                                      freq_after=freqs_after_etalon_lock[-1]))
         return etalon_settings, freqs_before_etalon_lock, freqs_after_etalon_lock
 
 # THE SECTION BELOW CURRENTLY DOES NOT TUNE THE TARGET LAMBDA
