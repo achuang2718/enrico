@@ -1,8 +1,10 @@
-enrico, the Fermi1 lab assistant
+# enrico, the Fermi1 lab assistant
 
-Handles image logging, live analysis, and plotting for the day-to-day data taking in Fermi1.
+Handles real-time image logging, analysis, and plotting for day-to-day data taking in Fermi1. Built on https://github.com/biswaroopmukherjee/breadboard-python-client.
 
-Getting started
+Also monitors/controls the numerous assorted sensors/actuators around the lab (e.g. optical powers, vacuum pressures, laser locks, etc.) and sends customized Slack status updates.
+
+## Getting started
 
 *System Requirements*
 Create a conda environment from enrico.yml. Requirements that are installed via pip can be found in pipRequirements.txt.
