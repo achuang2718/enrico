@@ -25,6 +25,7 @@ def fancy_plot(x, y, fmt='', ax=None, **kwargs):
     Raises:
         ValueError if x and y are not of the same length
     """
+    plt.style.use('seaborn')
     if(ax == None):
         ax = plt.gca()
     if(len(x) != len(y)):
@@ -309,7 +310,6 @@ def get_newest_df(watchfolder, optional_column_names=[], existing_df=None):
     df.sort_values(by='run_id', ascending=False, inplace=True)
     return df
 
-
 def delete_misplaced_images(free_space_threshold=200):
     import shutil
     from pathlib import Path
@@ -343,6 +343,3 @@ def delete_misplaced_images(free_space_threshold=200):
             print('operation aborted.')
 
         breakpoint()
-
-
-delete_misplaced_images()
