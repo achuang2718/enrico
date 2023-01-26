@@ -62,8 +62,9 @@ alex_chuang_id = "W0107FQ8YSD"
 yiqi_ni_id = "W0107FPUUPK"
 carsten_robens_id = "W011MTT6X7F"
 eric_wolf_id = "W0135CETQEM"
+yiming_zhang_id = 'U03LXCKDFD5'
 
-warning_id_list = [eric_wolf_id, alex_chuang_id, yiqi_ni_id, carsten_robens_id]
+warning_id_list = [eric_wolf_id, alex_chuang_id, yiqi_ni_id, yiming_zhang_id]
 mention_string = ""
 for warning_id in warning_id_list:
     mention_string = mention_string + "<@" + warning_id + ">"
