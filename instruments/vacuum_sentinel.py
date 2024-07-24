@@ -20,10 +20,16 @@ SLACK_THRESHOLD_REUPDATE_TIME_SECS = 600
 PRINT_VALUES = True
 
 #Configure addresses for vacuum monitors
-NA_OVEN_ADDRESS = "COM9"
-K_INTERMEDIATE_ADDRESS = "COM10"
-MAIN_AND_NA_INTERMEDIATE_ADDRESS = "COM11"
-K_OVEN_ADDRESS = "COM12"
+# NA_OVEN_ADDRESS = "COM9"
+# K_INTERMEDIATE_ADDRESS = "COM10"
+# MAIN_AND_NA_INTERMEDIATE_ADDRESS = "COM11"
+# K_OVEN_ADDRESS = "COM12"
+
+NA_OVEN_ADDRESS = "COM5"
+K_OVEN_ADDRESS = "COM6"
+K_INTERMEDIATE_ADDRESS = "COM3"
+MAIN_AND_NA_INTERMEDIATE_ADDRESS = "COM4"
+
 
 NA_OVEN_THRESHOLD_PRESSURE = 1e-7
 K_OVEN_THRESHOLD_PRESSURE = 1e-6
@@ -56,18 +62,19 @@ alex_chuang_id = "W0107FQ8YSD"
 yiqi_ni_id = "W0107FPUUPK"
 carsten_robens_id = "W011MTT6X7F"
 eric_wolf_id = "W0135CETQEM"
+yiming_zhang_id = 'U03LXCKDFD5'
 
-warning_id_list = [eric_wolf_id, alex_chuang_id, yiqi_ni_id, carsten_robens_id]
+warning_id_list = [eric_wolf_id, alex_chuang_id, yiqi_ni_id, yiming_zhang_id]
 mention_string = ""
 for warning_id in warning_id_list:
     mention_string = mention_string + "<@" + warning_id + ">"
 
 def main():
-	#my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
-	#							("K_OVEN_PUMP", K_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_OVEN_THRESHOLD_PRESSURE}, {}),
-	#							("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
-	#							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
-	#							local_log_filename = "Vacuum_Log.csv")
+	my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
+								("K_OVEN_PUMP", K_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_OVEN_THRESHOLD_PRESSURE}, {}),
+								("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
+								("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
+								local_log_filename = "Vacuum_Log.csv")
 	#my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
 	# 							("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
 	# 							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
@@ -77,10 +84,10 @@ def main():
 	# 							local_log_filename = "Vacuum_Log.csv")
 	# my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {})],
 	# 							local_log_filename = "Vacuum_Log.csv")
-	my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
-								("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
-								("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure2'], {"pressure2": NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
-	 							local_log_filename = "Vacuum_Log.csv")
+	# my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
+	# 							("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
+	# 							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure2'], {"pressure2": NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
+	#  							local_log_filename = "Vacuum_Log.csv")
 	# my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
 	# 							("K_OVEN_PUMP", K_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_OVEN_THRESHOLD_PRESSURE}, {}),
 	# 							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],

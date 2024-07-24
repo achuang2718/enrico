@@ -1,3 +1,6 @@
+#logs wavemeter readings to breadboard and relocks the TiSa coarsely using etalon tune and the wavemeter reading.
+#needs refactoring!
+
 # append main enrico folder to python path
 import os
 import sys
@@ -26,26 +29,37 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 import enrico_bot
+from status_monitor import StatusMonitor, alex_chuang_id
+from solstis import Solstis
 
-WAVEMETER_READ_TIME_OFFSET = 3 #Time wavemeter reading should _precede_ breadboard timestamp by
+# this script does not use the full functionality of the StatusMonitor class.
+wavemeter_status_monitor = StatusMonitor(warning_interval_in_min=10)
+# It only uses the Slack messaging functionality. Ideally, the wavemeter should be a class of its own that
+# inherits from StatusMonitor.
 
-STRIKES_YOURE_OUT = 3 #Number of times to allow read to fail before abort
-ALLOWED_FREQUENCY_CHANGE = 0.001 #Amount to allow frequency to change before throwing an "out of lock" warn
+# Time wavemeter reading should _precede_ breadboard timestamp by
+WAVEMETER_READ_TIME_OFFSET = 3
+
+STRIKES_YOURE_OUT = 3  # Number of times to allow read to fail before abort
+ALLOWED_FREQUENCY_CHANGE = 0.5e-3 #THz
+#IDEAL_READING = 372.553 # THz, used to be 389.253THz for K D1 Raman shelving
+IDEAL_READING = 389.253
 #EXPOSURE_MULTIPLIER = 1.2
 #EXPOSURE_LOWER_RAIL = 1
 #EXPOSURE_UPPER_RAIL = 1000
 
+
 def main():
-    refresh_time = 1  # seconds
+    my_tisa = Solstis()
+    refresh_time = 0.5  # seconds
     print("Did you remember to sync the os clock to a web server?")
     print('Reading wavemeter, readings will output below ... \n')
     old_run_dict = get_newest_run_dict(bc)
     old_run_id = old_run_dict['run_id']
     print("Initial run ID: " + str(old_run_id))
     time_warned = False
-    frequency_warned = False
     wavemeter_error_warned = False
-    wlm = WavelengthMeter() #Initialize a wavemeter object
+    wlm = WavelengthMeter()  # Initialize a wavemeter object
     initial_frequency = wlm.GetFrequency()
     if(initial_frequency <= 0):
         print("Unable to get wavemeter frequency. Check wavemeter. Program aborted.")
@@ -57,24 +71,30 @@ def main():
         successful_read = False
         fail_counter = 0
         while(not successful_read):
-                wavemeter_reading = wlm.GetFrequency()
-                successful_read = (wavemeter_reading > 0) #GetFrequency returns nonpositive error codes
-                if(not successful_read):
-                    fail_counter += 1
-                    time.sleep(0.1)
-                if(fail_counter >= STRIKES_YOURE_OUT):
-                    if(wavemeter_reading == -4): #Overexposed
-                        print('wavemeter.py terminating due to overexposure. \n')
-                        enrico_bot.post_message('Wavemeter overexposed, wavemeter.py terminated. Restart if taking data.')
-                        exit(-1) #Todo: Handle this more gracefully!!!
-                    if(wavemeter_reading == -3): #Underexposed
-                        warning_message = 'Wavemeter underexposed, adjust exposure time.'
-                        print(warning_message)
-                        if not wavemeter_error_warned:
-                            enrico_bot.post_message(warning_message)
-                            wavemeter_error_warned = True
-                        fail_counter = 0 #keep trying, underexposure is safe for wavemeter
-                    
+            wavemeter_reading = wlm.GetFrequency()
+            # GetFrequency returns nonpositive error codes
+            successful_read = (wavemeter_reading > 0)
+            if(not successful_read):
+                fail_counter += 1
+                time.sleep(0.1)
+            if(fail_counter >= STRIKES_YOURE_OUT):
+                if(wavemeter_reading == -4):  # Overexposed
+                    # enrico_bot.post_message('Wavemeter overexposed, wavemeter.py paused. Restart if taking data.')
+                    # overexposed_input = input('Wavemeter overexposed, adjust exposure. Restart readings? [y/n]: ')
+                    # if overexposed_input == 'n':
+                    #     print('exiting.')
+                    #     exit(-1)
+                    # elif overexposed_input == 'y':
+                    #     print('restarting...')
+                    fail_counter = 0
+                if(wavemeter_reading == -3):  # Underexposed
+                    warning_message = 'Wavemeter underexposed, adjust exposure time.'
+                    print(warning_message)
+                    if not wavemeter_error_warned:
+                        enrico_bot.post_message(warning_message)
+                        wavemeter_error_warned = True
+                    fail_counter = 0  # keep trying, underexposure is safe for wavemeter
+
         wavemeter_backlog[datetime.datetime.today()] = wavemeter_reading
         print('wavemeter reading: {reading}'.format(
             reading=str(wavemeter_reading)))
@@ -84,7 +104,16 @@ def main():
         # listen to breadboard server for new run_id
         try:
             new_run_dict = get_newest_run_dict(bc)
-            new_run_id = new_run_dict['run_id']
+            new_run_id = new_run_dict['run_id']            
+            # breakpoint()
+            if 'WavemeterTargetTHz' in new_run_dict.keys():
+                    IDEAL_READING = new_run_dict['WavemeterTargetTHz']
+                    print('wavemeter lock point: {reading}'.format(
+            reading=str(IDEAL_READING)))   
+            if 'WavemeterLockWidthGHz' in new_run_dict.keys():
+                    ALLOWED_FREQUENCY_CHANGE = new_run_dict['WavemeterLockWidthGHz']*1e-3
+                    print('wavemeter lock allowed lock width GHz: {reading}'.format(
+            reading=str(ALLOWED_FREQUENCY_CHANGE*1e3)))             
         except:
             logger.error(sys.exc_info()[1])
             pass
@@ -102,9 +131,11 @@ def main():
             time_diffs = np.array([time_diff_in_sec(
                 new_run_dict['runtime'], wavemeter_time) for wavemeter_time in wavemeter_backlog])
             time_diffs[time_diffs < WAVEMETER_READ_TIME_OFFSET] = -np.infty
-            min_idx = np.argmin(np.abs(time_diffs - WAVEMETER_READ_TIME_OFFSET))
-            min_time_diff_from_ideal = time_diffs[min_idx] - WAVEMETER_READ_TIME_OFFSET
-            max_time_diff_tolerance = 5  # seconds
+            min_idx = np.argmin(
+                np.abs(time_diffs - WAVEMETER_READ_TIME_OFFSET))
+            min_time_diff_from_ideal = time_diffs[min_idx] - \
+                WAVEMETER_READ_TIME_OFFSET
+            max_time_diff_tolerance = 20  # seconds
             if np.abs(min_time_diff_from_ideal) < max_time_diff_tolerance:
                 closest_wavemeter_time = list(
                     wavemeter_backlog.keys())[min_idx]
@@ -127,12 +158,32 @@ def main():
                 if not time_warned:
                     enrico_bot.post_message(warning_message)
                     time_warned = True
-            if(np.abs(initial_frequency - wavemeter_reading) > ALLOWED_FREQUENCY_CHANGE and (not frequency_warned)):
-                enrico_bot.post_message("Wavemeter reading has changed by 1 GHz after run id: {id}. Check laser lock.".format(id = str(new_run_id)))
-                frequency_warned = True
+        # 2022-06-02 temporarily disable the tisa software lock for downleg recording
+        # if np.abs(IDEAL_READING - wavemeter_reading) > ALLOWED_FREQUENCY_CHANGE:
+        #     try:
+        #         wavemeter_status_monitor.warn_on_slack('TiSa software lock engaging, setpoint {pt}THz'.format(pt
+        #             =str(IDEAL_READING)))
+        #         lock_success, debugging_message = my_tisa.software_lock(
+        #             IDEAL_READING, wlm, frequency_diff_threshold = ALLOWED_FREQUENCY_CHANGE, lock_engage_threshold= ALLOWED_FREQUENCY_CHANGE)
+        #     except Exception as e:
+        #         lock_success, debugging_message = False, '<@{id}>'.format(
+        #             id=alex_chuang_id) + 'software lock runtime error: ' + str(e)
+        #         raise e
+        #     if len(debugging_message) != 0:
+        #         if not lock_success:
+        #             wavemeter_status_monitor.warn_on_slack("Software lock failed: " + debugging_message +
+        #                                                    "... Wavemeter reading has deviated by more than {freq_change}GHz from its setpoint at {ideal_freq}THz after run id: {id}. Check laser lock.".format(
+        #                                                        id=str(
+        #                                                            new_run_id),
+        #                                                        freq_change=str(
+        #                                                            ALLOWED_FREQUENCY_CHANGE * 1000),
+        #                                                        ideal_freq=str(IDEAL_READING)))
+        #         else:
+        #             wavemeter_status_monitor.warn_on_slack('Software lock successful, but :' + debugging_message)
 
         # Wait before checking again
         time.sleep(refresh_time)
+
 
 if __name__ == '__main__':
     main()

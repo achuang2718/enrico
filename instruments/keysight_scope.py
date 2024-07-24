@@ -10,6 +10,8 @@ import time
 import parse
 import matplotlib.pyplot as plt
 import datetime
+import sys
+import traceback
 
 def load_scopeconfig():
     import json
@@ -82,7 +84,7 @@ class Oscilloscope():
             else:
                 Channel_Acquired = 0
             if Channel_Acquired == 0 or On_Off == 0: # Channel is off or no data acquired
-                scope_obj.write(":CHANnel" + str(ch) + ":DISPlay OFF") # Setting a channel to be a waveform source turns it on... so if here, turn it off.
+                # scope_obj.write(":CHANnel" + str(ch) + ":DISPlay OFF") # Setting a channel to be a waveform source turns it on... so if here, turn it off.
                 CHS_LIST[ch-1] = 0 # Recall that python indices start at 0, so ch1 is index 0
             else: # Channel is on AND data acquired
                 CHS_LIST[ch-1] = 1 # After the CHS_LIST array is filled it could, for example look like: if chs 1,3 and 4 were on, CHS_LIST = [1,0,1,1]
@@ -102,9 +104,9 @@ class Oscilloscope():
 
         ##########################
         if NUMBER_CHANNELS_ON == 0:
+            scope_obj.write(':RUN')
             scope_obj.clear()
-            scope_obj.close()
-            sys.exit("No data has been acquired. Properly closing scope and aborting script.")
+            raise  ValueError('No data acquired.')
 
         ############################################
         # Find first channel on (as needed/desired)
@@ -422,8 +424,8 @@ class LockDetector(StatusMonitor):
     """A LockDetector continuously monitors a scope and uploads to the newest breadboard run_id when available.
     lock_channels is a dict of {channel_idx:{'name':MEANINGFULNAME,'lock_discriminator':LOCKDISCRIMINATOR_FUNCTION}}
     or simply {chl_idx:{'name':MEANINGFULNAME}} as the lock_discriminator option is optional. See example_lockdiscriminator above."""
-    def __init__(self, visa_address, lock_channels = None, refresh_time = 5):
-        StatusMonitor.__init__(self)
+    def __init__(self, visa_address, lock_channels = None, refresh_time = 5, **kwargs):
+        StatusMonitor.__init__(self, **kwargs)
         self.scope = Oscilloscope(visa_address)
         if lock_channels is None:
             done, self.lock_channels = None, {}
@@ -440,26 +442,35 @@ class LockDetector(StatusMonitor):
         i=0
         with self.scope as scope:
             while True:
-                scope_traces = scope.acquire_traces()
-                time_now = datetime.datetime.today()
-                lock_dict = {}
-                for chl_idx in self.lock_channels.keys():
-                    for column_name in scope_traces.columns:
-                        if 'ch{idx}'.format(idx=str(chl_idx)) in column_name:
-                            break #set column_name to ch{idx}_in_{unit}
-                    lock_trace = np.array(scope_traces[column_name])
-                    name = self.lock_channels[chl_idx]['name']
-                    if 'lock_discriminator' in self.lock_channels[chl_idx].keys():
-                        locked_bool = self.lock_channels[chl_idx]['lock_discriminator'](lock_trace)
-                        if not locked_bool:
-                            pass #for future, we could add bot notifications here
-                    _, unit = parse.parse('{}_in_{}', column_name)
-                    lock_dict.update({'{name}min_in_{unit}'.format(name=name, unit=unit): np.min(lock_trace),
-                                 '{name}max_in_{unit}'.format(name=name, unit=unit): np.max(lock_trace),
-                                 '{name}mean_in_{unit}'.format(name=name, unit=unit): np.mean(lock_trace)})
+                try:
+                    scope_traces = scope.acquire_traces()
+                    time_now = datetime.datetime.today()
+                    lock_dict = {}
+                    for chl_idx in self.lock_channels.keys():
+                        for column_name in scope_traces.columns:
+                            if 'ch{idx}'.format(idx=str(chl_idx)) in column_name:
+                                break #set column_name to ch{idx}_in_{unit}
+                        lock_trace = np.array(scope_traces[column_name])
+                        name = self.lock_channels[chl_idx]['name']
+                        if 'lock_discriminator' in self.lock_channels[chl_idx].keys():
+                            locked_bool = self.lock_channels[chl_idx]['lock_discriminator'](lock_trace)
+                            if not locked_bool:
+                                msg = (self.lock_channels[chl_idx]['name'] + ' unlocked.')
+                                self.warn_on_slack(msg)
+                        _, unit = parse.parse('{}_in_{}', column_name)
+                        lock_dict.update({'{name}min_in_{unit}'.format(name=name, unit=unit): np.min(lock_trace),
+                                     '{name}max_in_{unit}'.format(name=name, unit=unit): np.max(lock_trace),
+                                     '{name}mean_in_{unit}'.format(name=name, unit=unit): np.mean(lock_trace)})
 
-                self.append_to_backlog(lock_dict, time_now=time_now)
-                self.upload_to_breadboard()
-                time.sleep(self.refresh_time)
-                print('\n\n')
-                i+=1
+                    self.append_to_backlog(lock_dict, time_now=time_now)
+                    self.upload_to_breadboard()
+                    time.sleep(self.refresh_time)
+                    print('\n\n')
+                    i+=1
+                except ValueError as e:
+                    if str(e) == 'No data acquired.':
+                        print(str(e))
+                        self.upload_to_breadboard()
+                    else:
+                        raise e
+                    time.sleep(2)

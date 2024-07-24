@@ -102,7 +102,6 @@ def measurement_directory(warn=False, measurement_name=None, basepath='', yester
                     print('input not parsed')
             else:
                 ready = True
-
     return measurement_dir
 
 

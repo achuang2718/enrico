@@ -126,7 +126,7 @@ class StatusMonitor:
         try:
             run_dict = get_newest_run_dict(self.bc)
         except:
-            pass
+            print(traceback.format_exc())
         new_run_id = run_dict['run_id']
         time_diffs = np.array([time_diff_in_sec(
             run_dict['runtime'], backlog_time) for backlog_time in self.backlog])

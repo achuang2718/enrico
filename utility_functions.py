@@ -190,19 +190,22 @@ def load_breadboard_client():
     return bc
 
 
-def get_newest_run_dict(bc, max_retries=10):
+def get_newest_run_dict(bc, max_retries=10, run_id_offset=0):
     """Gets newest run dictionary containing runtime, run_id, and parameters via breadboard client bc
+    Optional args:
+        run_id_offset ~ (int <= 0) negative values will return not the most recent run_dict, 
+            but run_id_offset ids from the past 
     """
     retries = 0
     while retries < max_retries:
         try:
             resp = bc._send_message(
-                'get', '/runs/', params={'lab': 'fermi1', 'limit': 1})
+                'get', '/runs/', params={'lab': 'fermi1', 'limit': abs(run_id_offset) + 1})
             if resp.status_code != 200:
                 retries += 1
                 time.sleep(0.3)
                 continue
-            new_run_dict = resp.json()['results'][0]
+            new_run_dict = resp.json()['results'][abs(run_id_offset)]
             break
         except JSONDecodeError:
             time.sleep(0.3)

@@ -1,9 +1,9 @@
 {
-    "visa_addresses": {"near laser tables":"TCPIP0::192.168.1.3::inst0::INSTR",
-    					"near control PC":"TCPIP0::192.168.1.11::inst0::INSTR"},
-    "channel_names": {"near laser tables":{"1":{"name":"test1"},
-										   "2":{"name":"test2"}},
-					  "near control PC":{"1":{"name":"test1"},
-										   "2":{"name":"test2"}}
-					  }
+    "visa_addresses": {"near laser tables":"TCPIP0::192.168.1.3::INSTR",
+    					"near control PC":"TCPIP0::192.168.1.2::INSTR",
+    				"previous near laser tables":"TCPIP0::a-dx2004a-02443.local::inst0::INSTR"},
+    "channel_names": {"near laser tables":{"1":{"name":"uplegULEtransmission"},
+										   "2":{"name":"downlegULEtransmission"}},
+					  "near control PC":{"1":{"name":"uplegAmplitude"},
+										   "2":{"name":"downlegAmplitude"}}}
 }
