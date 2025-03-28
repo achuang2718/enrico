@@ -1,9 +1,10 @@
 clear all;
-data = readtable('Vacuum_Log.csv');
+data = readtable('Vacuum_Log-2024-03-25');
 
 Na_oven_change_date = datetime({'0022-02-03 09:00:00',...
                        '0022-04-13 09:00:00',...
-                       '0022-06-06 09:00:00'});
+                       '0022-06-06 09:00:00',...
+                       '0023-04-13 09:00:00'});
 
 % filter out data when Na oven ion pump is off during oven change
 data.NA_OVEN_PUMPPressure(data.NA_OVEN_PUMPPressure == 9.9e9) = nan;
@@ -39,3 +40,9 @@ end
 ylim([1e-7,5e-6]);
 ylabel('torr');
 title('K oven chamber ion pump pressure');
+
+figure(4);clf;
+semilogy(data.Time,data.K_INTERMEDIATE_PUMPPressure);
+
+ylabel('torr');
+title('K intermediate chamber ion pump pressure');
