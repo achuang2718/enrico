@@ -31,11 +31,11 @@ K_INTERMEDIATE_ADDRESS = "COM3"
 MAIN_AND_NA_INTERMEDIATE_ADDRESS = "COM4"
 
 
-NA_OVEN_THRESHOLD_PRESSURE = 3.0e-7 # used to be 1e-7, changed 2023-11-24 HQB for post-bake monitoring
-K_OVEN_THRESHOLD_PRESSURE = 5e-6 #5e-6 changed 2025-02-25 HB, 2e-6 changed 2023-08-13 AC, 1e-6, changed 2023-02-14 AC
-MAIN_THRESHOLD_PRESSURE = 2e-10
+NA_OVEN_THRESHOLD_PRESSURE = 1e-7
+K_OVEN_THRESHOLD_PRESSURE = 1e-6
+MAIN_THRESHOLD_PRESSURE = 1e-10
 NA_INTERMEDIATE_THRESHOLD_PRESSURE = 5e-8
-K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-8
+K_INTERMEDIATE_THRESHOLD_PRESSURE = 1e-5
 
 #List of sentinel-monitored values to plot. Elements are keys of the dict returned by monitor_once
 PLOTTING_KEY_LIST = []
@@ -58,14 +58,12 @@ PLOT_TIMEUNIT = "m"
 
 #Configure settings for who to warn in a vacuum emergency
 #new_ids after migrating to MIT enterprise
-# alex_chuang_id = "W0107FQ8YSD"
-# yiqi_ni_id = "W0107FPUUPK"
-# carsten_robens_id = "W011MTT6X7F"
-# eric_wolf_id = "W0135CETQEM"
-yiming_zhang_id = 'U03LXCKDFD5'
-huan_bui_id = 'U02086497SL'
+alex_chuang_id = "W0107FQ8YSD"
+yiqi_ni_id = "W0107FPUUPK"
+carsten_robens_id = "W011MTT6X7F"
+eric_wolf_id = "W0135CETQEM"
 
-warning_id_list = [yiming_zhang_id, huan_bui_id]
+warning_id_list = [eric_wolf_id, alex_chuang_id, yiqi_ni_id, carsten_robens_id]
 mention_string = ""
 for warning_id in warning_id_list:
     mention_string = mention_string + "<@" + warning_id + ">"
@@ -75,7 +73,7 @@ def main():
 								("K_OVEN_PUMP", K_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':K_OVEN_THRESHOLD_PRESSURE}, {}),
 								("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
 								("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],
-								local_log_filename = "Vacuum_Log-2024-03-25.csv")
+								local_log_filename = "Vacuum_Log_ovenChange2023-11-22.csv")
 	#my_monitor = VacuumMonitor([("NA_OVEN_PUMP", NA_OVEN_ADDRESS, "pump_spc", ['pressure'], {'pressure':NA_OVEN_THRESHOLD_PRESSURE}, {}),
 	# 							("K_INTERMEDIATE_PUMP", K_INTERMEDIATE_ADDRESS, "pump_spce", ['pressure'], {'pressure':K_INTERMEDIATE_THRESHOLD_PRESSURE}, {}),
 	# 							("MAIN(1)_AND_NA_INTERMEDIATE(2)_Pump", MAIN_AND_NA_INTERMEDIATE_ADDRESS, "pump_mpc", ['pressure1', 'pressure2'], {'pressure1': MAIN_THRESHOLD_PRESSURE, 'pressure2':NA_INTERMEDIATE_THRESHOLD_PRESSURE}, {})],

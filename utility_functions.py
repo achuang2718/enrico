@@ -125,7 +125,7 @@ def initialize_live_plot(num = None, can_make_interactive = True):
     clear_previous: Whether to clear the previous curves off of the live plot when a new one is plotted. Default True. 
     keep_settings: Whether axis settings (e.g. log scale, labels, etc.) are kept when the data is cleared. Default True.
 """
-def update_live_plot(x, y, fmt = '', ax = None, fancy = False, clear_previous = True, keep_settings = True, pause_length = 0.001, **kwargs):
+def update_live_plot(x, y, fmt = '', ax = None, fancy = False, clear_previous = True, keep_settings = True, pause_length = 0.1, **kwargs):
     if(ax == None):
         ax = plt.gca() 
     if(clear_previous):
@@ -138,8 +138,15 @@ def update_live_plot(x, y, fmt = '', ax = None, fancy = False, clear_previous = 
         fancy_plot(x, y, fmt = fmt, ax = ax, **kwargs)
     else:
         ax.plot(x, y, fmt, **kwargs) 
-    plt.draw()
-    plt.pause(pause_length)
+    # plt.draw()
+
+    fig = plt.gcf()
+    fig.canvas.draw()
+    plt.tight_layout()
+    fig.canvas.flush_events()
+    # plt.pause(pause_length)
+    time.sleep(pause_length)
+    plt.savefig(r"C:\Users\ZCAM-Fermi1\Documents\GitHub\enrico\instruments\Vacuum_Log_NaOvenChange_2023-11-22.png")
     
     
 
