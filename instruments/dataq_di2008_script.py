@@ -39,19 +39,46 @@ labels_2 = ['pump',
     'top2',
     'top3',
     'magtrap_IGBT',
-    'magtrap_diode']
+    'magtrap_diode',
+    'lightsheet_plug_beamdump']
 print(labels_1, labels_2)
-thermocouple_type_list = ['j', 'j', 'j', 'j', 'j', 'j']
+
+temp_threshold_dict = {
+                        'bottom1':50,
+                        'bottom2':50,
+                        'top1':50,
+                        'KSlower1':50,
+                        'KSlower2':50,
+                        'NaSlowerDecreasing':50,
+                        'NaSlower':50,
+                        'bottomBucket':50,
+                        'pump':50,
+                        'feshbachCoil':50,
+                        'top2':50,
+                        'top3':50,
+                        'magtrap_IGBT':50,
+                        'magtrap_diode':50,
+                        'lightsheet_plug_beamdump':42
+                        }
+                       
+
+thermocouple_type_list_2 = ['j', 'j', 'j', 'j', 'j', 'j', 'k']
 daq_1, port_lookup = initialize_daq(sn_1, labels_1)
 print('devce 1 initialized \n\n\n')
-daq_2, port_lookup2 = initialize_daq(sn_2, labels_2)#, thermocouple_type_list=thermocouple_type_list)
+daq_2, port_lookup2 = initialize_daq(sn_2, labels_2, thermocouple_type_list=thermocouple_type_list_2)
 print('device 2 initialized\n\n\n')
 port_lookup.update(port_lookup2)
+
+
 TEMPERATURE_INTERLOCK_OUTPUT_CHL = 5 # On device 1; Goes to digital logic on FB power supply rack at the back of the experiment
 SLOWER_COIL_DECREASING_POWER_INTERLOCK_CHL = 1 # ON DEVICE 2; Goes to the constantly-on Lambda power supply 'NaSlowerCoilDecreasing' 
+PLUG_INTERLOCK_OUTPUT_CHL = 2 #on device 2; goes to verdi interlock (HIGH - verdi normal; LOW - verdi interlocked)
+LIGHTSHEET_INTERLOCK_OUTPUT_CHL = 3 #on device 2; goes to IPG interlock (HIGH - normal; LOW - interlocked)
 daq_1.setup_dio_direction(4, DigitalDirection.OUTPUT)
 daq_1.setup_dio_direction(TEMPERATURE_INTERLOCK_OUTPUT_CHL, DigitalDirection.OUTPUT)
 daq_2.setup_dio_direction(SLOWER_COIL_DECREASING_POWER_INTERLOCK_CHL, DigitalDirection.OUTPUT)
+daq_2.setup_dio_direction(PLUG_INTERLOCK_OUTPUT_CHL, DigitalDirection.OUTPUT)
+daq_2.setup_dio_direction(LIGHTSHEET_INTERLOCK_OUTPUT_CHL, DigitalDirection.OUTPUT)
 daq_1.start()
 daq_2.start()
 
@@ -63,6 +90,8 @@ strikes = 0
 port_overheated = False
 daq_1.write_do(TEMPERATURE_INTERLOCK_OUTPUT_CHL, True) # if temperature within limits, output high
 daq_2.write_do(SLOWER_COIL_DECREASING_POWER_INTERLOCK_CHL, True) # configured lambda power supply to be off when low
+daq_2.write_do(PLUG_INTERLOCK_OUTPUT_CHL, True)
+daq_2.write_do(LIGHTSHEET_INTERLOCK_OUTPUT_CHL, True)
 ################################################################################################## remove after testing
 TESTBOOL = True
 ################################################################################################## remove after testing
@@ -74,13 +103,15 @@ while True:
             port_temperature = port_lookup[port].value
             print([port, port_temperature])
             temperature_dict.update({port: port_temperature})
-            if port_temperature > TEMPERATURE_THRESHOLD:
+            if port_temperature > temp_threshold_dict[port]: #TEMPERATURE_THRESHOLD:
                 port_overheated = True
                 if strikes > STRIKE_THRESHOLD:
                     my_monitor.warn_on_slack('WARNING: ' + str(port) + ' overheating. Current temperature ' +
-                        "{:10.1f} deg C. Interlock engaged, coil IGBTs open. 'NaSlowerDecreasing' output shut off. Restart dataq_di2008_script.py to resume normal operation.".format(port_temperature), annoying=True)
+                        "{:10.1f} deg C. Interlock engaged: coil IGBTs open; 'NaSlowerDecreasing' output shut off. IPG+Verdi lasers turned off. Restart dataq_di2008_script.py to resume normal operation.".format(port_temperature), annoying=True)
                     daq_1.write_do(TEMPERATURE_INTERLOCK_OUTPUT_CHL, False)
                     daq_2.write_do(SLOWER_COIL_DECREASING_POWER_INTERLOCK_CHL, False)
+                    daq_2.write_do(PLUG_INTERLOCK_OUTPUT_CHL, False)
+                    daq_2.write_do(LIGHTSHEET_INTERLOCK_OUTPUT_CHL, False)
         if port_overheated:
             strikes += 1
             print('strikes: ', strikes)
@@ -97,5 +128,7 @@ while True:
         my_monitor.warn_on_slack('Temperature monitor software error: ' + error_msg + 'Interlock engaged, coil IGBTs open. Restart dataq_di2008_script.py to resume normal operation.... Temperature logging is still live.')
         daq_1.write_do(TEMPERATURE_INTERLOCK_OUTPUT_CHL, False)
         daq_2.write_do(SLOWER_COIL_DECREASING_POWER_INTERLOCK_CHL, False)
+        daq_2.write_do(PLUG_INTERLOCK_OUTPUT_CHL, False)
+        daq_2.write_do(LIGHTSHEET_INTERLOCK_OUTPUT_CHL, False)
     sleep(REFRESH_TIME)
 # 
